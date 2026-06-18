@@ -15,11 +15,13 @@ import (
 // inserts a new entry into the database, and returns
 // the created entry as JSON.
 func CreateEntry(w http.ResponseWriter, r *http.Request) {
+	// Only allow POST requests on this handler
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
+	// Decode the JSON request body into a NewEntryRequest struct
 	var req models.NewEntryRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -34,14 +36,14 @@ func CreateEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If no language_id is provided, default to Dholuo for now
-	// I will make this dynamic once more languages are added
+	// If no language_id is provided, default to Dholuo
+	// We will make this dynamic once more languages are added
 	if req.LanguageID == "" {
-		var dholuoID string
+		var dhuoloID string
 		err := db.DB.QueryRow(
 			context.Background(),
 			"SELECT id FROM languages WHERE code = 'luo'",
-		).Scan(&dholuoID)
+		).Scan(&dhuoloID)
 		if err != nil {
 			http.Error(w, "could not find default language", http.StatusInternalServerError)
 			return
@@ -50,8 +52,15 @@ func CreateEntry(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Insert the entry into the database
-	// Status defaults to 'pending' — cuz no entry goes live without review
+	// Status defaults to 'pending' — no entry goes live without review
 	var entry models.Entry
+	// Convert empty UUID strings to nil so PostgreSQL receives NULL
+	// rather than an empty string, which is invalid for UUID columns
+	var contributorID *string
+	if req.ContributorID != "" {
+		contributorID = &req.ContributorID
+	}
+
 	err = db.DB.QueryRow(
 		context.Background(),
 		`INSERT INTO entries (
@@ -69,7 +78,7 @@ func CreateEntry(w http.ResponseWriter, r *http.Request) {
 		req.LanguageID, req.SourceText, req.English, req.PartOfSpeech,
 		req.Explanation, req.EnglishEquivalent, req.ExampleSource,
 		req.ExampleEnglish, req.Notes, req.Category, req.Dialect,
-		req.ContributorID, req.Source, req.SourceURL,
+		contributorID, req.Source, req.SourceURL,
 	).Scan(
 		&entry.ID, &entry.LanguageID, &entry.SourceText, &entry.English,
 		&entry.PartOfSpeech, &entry.Explanation, &entry.EnglishEquivalent,
@@ -106,7 +115,11 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build the query — filter by status always, category optionally
-	var rows interface{ Next() bool; Scan(...interface{}) error; Err() error }
+	var rows interface {
+		Next() bool
+		Scan(...interface{}) error
+		Err() error
+	}
 	var err error
 
 	if category != "" {
