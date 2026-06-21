@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loba — Dictionary</title>
+<link rel="stylesheet" href="styles/loba.css">
+</head>
+<body>
+
+<div class="card wide-card">
+  <h1>loba.</h1>
+  <p class="sub">Browse the Dholuo corpus.</p>
+
+  <input type="text" id="search" placeholder="Search Dholuo or English..." style="margin-bottom: 10px;">
+
+  <div id="category-filters" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem;"></div>
+
+  <div id="dictionary">
+    <div class="loading">Loading dictionary...</div>
+  </div>
+</div>
+
+<script>
+const API_URL = "http://localhost:8080/api/v1/entries";
+
+let allEntries = [];
+let activeCategory = "All";
+
+async function loadDictionary() {
+  const el = document.getElementById('dictionary');
+
+  try {
+    const response = await fetch(`${API_URL}?status=approved`);
+    if (!response.ok) throw new Error('Failed to load entries');
+
+    allEntries = await response.json();
+
+    buildCategoryFilters();
+    renderEntries();
+
+  } catch (err) {
+    el.innerHTML = `<div class="empty-state">Could not load dictionary: ${err.message}</div>`;
+  }
+}
+
+function buildCategoryFilters() {
+  const categories = ["All", ...new Set(allEntries.map(e => e.category).filter(Boolean))];
+  const filterEl = document.getElementById('category-filters');
+
+  filterEl.innerHTML = categories.map(cat => `
+    <button
+      onclick="setCategory('${cat}')"
+      style="
+        font-size: 12px;
+        padding: 5px 14px;
+        border-radius: 20px;
+        border: 0.5px solid rgba(26,26,24,0.15);
+        background: ${cat === activeCategory ? '#1A1A18' : 'white'};
+        color: ${cat === activeCategory ? '#F5F0E8' : '#1A1A18'};
+        cursor: pointer;
+      "
+    >${cat}</button>
+  `).join('');
+}
+
+function setCategory(cat) {
+  activeCategory = cat;
+  buildCategoryFilters();
+  renderEntries();
+}
+
+function renderEntries() {
+  const el = document.getElementById('dictionary');
+  const query = document.getElementById('search').value.toLowerCase();
+
+  const filtered = allEntries.filter(e => {
+    const matchesCategory = activeCategory === "All" || e.category === activeCategory;
+    const matchesSearch = !query ||
+      e.source_text.toLowerCase().includes(query) ||
+      e.english.toLowerCase().includes(query);
+    return matchesCategory && matchesSearch;
+  });
+
+  if (filtered.length === 0) {
+    el.innerHTML = '<div class="empty-state">No entries match your search.</div>';
+    return;
+  }
+
+  // Sort alphabetically by source text
+  filtered.sort((a, b) => a.source_text.localeCompare(b.source_text));
+
+  el.innerHTML = filtered.map(entry => `
+    <div class="entry-row" onclick="toggleDetail('${entry.id}')" style="cursor: pointer;">
+      <div class="entry-source">${escapeHtml(entry.source_text)}</div>
+      <div class="entry-english">${escapeHtml(entry.english)}</div>
+      <div class="entry-meta">
+        ${entry.category ? `<span class="badge">${escapeHtml(entry.category)}</span>` : ''}
+        ${entry.dialect ? `<span class="badge">${escapeHtml(entry.dialect)}</span>` : ''}
+        ${entry.vote_score > 0 ? `<span class="badge">${entry.vote_score} verifications</span>` : ''}
+      </div>
+      <div id="detail-${entry.id}" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 0.5px solid rgba(26,26,24,0.1); font-size: 13px; color: #6B6860;">
+        ${entry.example_source ? `<div style="font-style: italic; color: #1A1A18; margin-bottom: 2px;">${escapeHtml(entry.example_source)}</div>` : ''}
+        ${entry.example_english ? `<div style="margin-bottom: 8px;">${escapeHtml(entry.example_english)}</div>` : ''}
+        ${entry.explanation ? `<div style="margin-bottom: 6px;"><strong>Meaning:</strong> ${escapeHtml(entry.explanation)}</div>` : ''}
+        ${entry.english_equivalent ? `<div style="margin-bottom: 6px;"><strong>English equivalent:</strong> ${escapeHtml(entry.english_equivalent)}</div>` : ''}
+        ${entry.notes ? `<div>${escapeHtml(entry.notes)}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleDetail(id) {
+  const detail = document.getElementById(`detail-${id}`);
+  const isOpen = detail.style.display === 'block';
+  // Close all other open details first
+  document.querySelectorAll('[id^="detail-"]').forEach(d => d.style.display = 'none');
+  detail.style.display = isOpen ? 'none' : 'block';
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+document.getElementById('search').addEventListener('input', renderEntries);
+
+loadDictionary();
+</script>
+
+</body>
+</html>
