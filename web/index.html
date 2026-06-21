@@ -30,16 +30,37 @@
     <option>Proverbs</option>
     <option>Daily life</option>
     <option>Emotions</option>
+    <option>Body & health</option>
+    <option>Nature</option>
+    <option>Numbers</option>
+    <option>Spirituality</option>
+    <option>Music & culture</option>
+    <option>Clothing</option>
+    <option>Farming & livestock</option>
+    <option>Time & seasons</option>
+    <option value="__custom__">Other (type below)</option>
   </select>
+  <input type="text" id="custom-category" placeholder="Type your category" style="display:none; margin-top: 6px;">
 
-  <label>Dialect region</label>
-  <select id="dialect">
-    <option value="">Not specified</option>
-    <option>Kisumu</option>
-    <option>Siaya</option>
-    <option>Homa Bay</option>
-    <option>Migori</option>
-  </select>
+  <label>Dialect region(s)</label>
+  <div style="display: flex; flex-wrap: wrap; gap: 12px; padding: 9px 12px; border: 0.5px solid rgba(26,26,24,0.12); border-radius: 8px; margin-bottom: 4px;">
+    <label style="display: flex; align-items: center; gap: 5px; font-weight: 400; margin: 0;">
+      <input type="checkbox" value="Kisumu" class="dialect-check"> Kisumu
+    </label>
+    <label style="display: flex; align-items: center; gap: 5px; font-weight: 400; margin: 0;">
+      <input type="checkbox" value="Siaya" class="dialect-check"> Siaya
+    </label>
+    <label style="display: flex; align-items: center; gap: 5px; font-weight: 400; margin: 0;">
+      <input type="checkbox" value="Homa Bay" class="dialect-check"> Homa Bay
+    </label>
+    <label style="display: flex; align-items: center; gap: 5px; font-weight: 400; margin: 0;">
+      <input type="checkbox" value="Migori" class="dialect-check"> Migori
+    </label>
+    <label style="display: flex; align-items: center; gap: 5px; font-weight: 400; margin: 0;">
+      <input type="checkbox" value="Tanzania Luo" class="dialect-check"> Tanzania Luo
+    </label>
+  </div>
+  <div style="font-size: 11px; color: #6B6860; margin-bottom: 4px;">Select all that apply, or leave blank if unsure</div>
 
   <label>Example sentence (Dholuo)</label>
   <textarea id="example_source" placeholder="A sentence using this word..."></textarea>
@@ -58,6 +79,11 @@
 <script>
 const API_URL = "http://localhost:8080/api/v1/entries";
 const CONTRIBUTORS_URL = "http://localhost:8080/api/v1/contributors";
+
+document.getElementById('category').addEventListener('change', function() {
+  const customInput = document.getElementById('custom-category');
+  customInput.style.display = this.value === '__custom__' ? 'block' : 'none';
+});
 
 async function submitEntry() {
   const username = document.getElementById('username').value.trim();
@@ -84,8 +110,12 @@ async function submitEntry() {
     const payload = {
       source_text: sourceText,
       english: english,
-      category: document.getElementById('category').value,
-      dialect: document.getElementById('dialect').value,
+      category: document.getElementById('category').value === '__custom__'
+        ? document.getElementById('custom-category').value
+        : document.getElementById('category').value,
+      dialect: Array.from(document.querySelectorAll('.dialect-check:checked'))
+        .map(cb => cb.value)
+        .join(', '),
       example_source: document.getElementById('example_source').value,
       example_english: document.getElementById('example_english').value,
       notes: document.getElementById('notes').value,
@@ -124,6 +154,7 @@ function clearForm() {
   document.getElementById('example_source').value = '';
   document.getElementById('example_english').value = '';
   document.getElementById('notes').value = '';
+  document.querySelectorAll('.dialect-check').forEach(cb => cb.checked = false);
 }
 </script>
 
