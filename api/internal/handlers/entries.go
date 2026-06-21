@@ -446,3 +446,50 @@ func GetOrCreateContributor(w http.ResponseWriter, r *http.Request) {
 		"username": req.Username,
 	})
 }
+
+// GetLeaderboard handles GET /api/v1/leaderboard
+// Returns contributors ranked by their number of approved entries.
+func GetLeaderboard(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	type LeaderboardEntry struct {
+		Username   string `json:"username"`
+		EntryCount int    `json:"entry_count"`
+	}
+
+	rows, err := db.DB.Query(
+		context.Background(),
+		`SELECT c.username, COUNT(e.id) as entry_count
+		FROM contributors c
+		JOIN entries e ON e.contributor_id = c.id
+		WHERE e.status = 'approved'
+		GROUP BY c.username
+		ORDER BY entry_count DESC
+		LIMIT 20`,
+	)
+	if err != nil {
+		http.Error(w, "could not fetch leaderboard", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var leaderboard []LeaderboardEntry
+	for rows.Next() {
+		var entry LeaderboardEntry
+		if err := rows.Scan(&entry.Username, &entry.EntryCount); err != nil {
+			http.Error(w, "error reading leaderboard", http.StatusInternalServerError)
+			return
+		}
+		leaderboard = append(leaderboard, entry)
+	}
+
+	if leaderboard == nil {
+		leaderboard = []LeaderboardEntry{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(leaderboard)
+}

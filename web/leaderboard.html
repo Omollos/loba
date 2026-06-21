@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loba — Contributors</title>
+<link rel="stylesheet" href="styles/loba.css">
+</head>
+<body>
+
+<div class="card">
+  <h1>loba.</h1>
+  <p class="sub">Top contributors, ranked by approved entries.</p>
+
+  <div id="leaderboard">
+    <div class="loading">Loading contributors...</div>
+  </div>
+</div>
+
+<script>
+const LEADERBOARD_URL = "http://localhost:8080/api/v1/leaderboard";
+
+async function loadLeaderboard() {
+  const el = document.getElementById('leaderboard');
+
+  try {
+    const response = await fetch(LEADERBOARD_URL);
+    if (!response.ok) throw new Error('Failed to load leaderboard');
+
+    const contributors = await response.json();
+
+    if (contributors.length === 0) {
+      el.innerHTML = '<div class="empty-state">No approved entries yet. Be the first.</div>';
+      return;
+    }
+
+    el.innerHTML = contributors.map((c, i) => `
+      <div class="entry-row" style="display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 18px; font-weight: 600; color: #6B6860; width: 24px;">${i + 1}</span>
+          <span style="font-size: 15px; font-weight: 500;">${escapeHtml(c.username)}</span>
+        </div>
+        <span class="badge">${c.entry_count} ${c.entry_count === 1 ? 'entry' : 'entries'}</span>
+      </div>
+    `).join('');
+
+  } catch (err) {
+    el.innerHTML = `<div class="empty-state">Could not load leaderboard: ${err.message}</div>`;
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+loadLeaderboard();
+</script>
+
+</body>
+</html>

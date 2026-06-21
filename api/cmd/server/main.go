@@ -54,6 +54,7 @@ func main() {
 	http.HandleFunc("POST /api/v1/entries/{id}/vote", handlers.CastVote)
 	http.HandleFunc("GET /api/v1/stats", handlers.GetStats)
 	http.HandleFunc("POST /api/v1/contributors", handlers.GetOrCreateContributor)
+	http.HandleFunc("GET /api/v1/leaderboard", handlers.GetLeaderboard)
 
 	log.Printf("Loba API starting on port %s", port)
 	err = http.ListenAndServe(":"+port, withCORS(http.DefaultServeMux))
