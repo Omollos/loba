@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loba — Add a Dholuo entry</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #F5F0E8;
+    color: #1A1A18;
+    padding: 2rem;
+  }
+  .card {
+    max-width: 600px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 16px;
+    border: 0.5px solid rgba(26,26,24,0.12);
+    padding: 2rem;
+  }
+  h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+  .sub { font-size: 13px; color: #6B6860; margin-bottom: 1.5rem; }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 5px;
+    margin-top: 14px;
+  }
+  input, textarea, select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 0.5px solid rgba(26,26,24,0.12);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 70px; }
+  button {
+    margin-top: 1.5rem;
+    background: #1A1A18;
+    color: #F5F0E8;
+    border: none;
+    padding: 11px 24px;
+    border-radius: 24px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button:hover { opacity: 0.85; }
+  #result {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    border-radius: 10px;
+    font-size: 13px;
+    display: none;
+  }
+  #result.success { background: #E1F5EE; color: #0F6E56; display: block; }
+  #result.error { background: #FAECE7; color: #993C1D; display: block; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>loba.</h1>
+  <p class="sub">Add a Dholuo entry to the corpus.</p>
+
+  <label>Dholuo text *</label>
+  <input type="text" id="source_text" placeholder="e.g. Chuny">
+
+  <label>English translation *</label>
+  <input type="text" id="english" placeholder="e.g. Heart, soul, spirit">
+
+  <label>Category</label>
+  <select id="category">
+    <option value="">Select category</option>
+    <option>Greetings</option>
+    <option>Family</option>
+    <option>Food & drink</option>
+    <option>Proverbs</option>
+    <option>Daily life</option>
+    <option>Emotions</option>
+  </select>
+
+  <label>Dialect region</label>
+  <select id="dialect">
+    <option value="">Not specified</option>
+    <option>Kisumu</option>
+    <option>Siaya</option>
+    <option>Homa Bay</option>
+    <option>Migori</option>
+  </select>
+
+  <label>Example sentence (Dholuo)</label>
+  <textarea id="example_source" placeholder="A sentence using this word..."></textarea>
+
+  <label>Example sentence (English)</label>
+  <textarea id="example_english" placeholder="The translation of that sentence..."></textarea>
+
+  <label>Notes</label>
+  <textarea id="notes" placeholder="Pronunciation, tone, usage..."></textarea>
+
+  <button onclick="submitEntry()">Submit entry</button>
+
+  <div id="result"></div>
+</div>
+
+<script>
+const API_URL = "http://localhost:8080/api/v1/entries";
+
+async function submitEntry() {
+  const sourceText = document.getElementById('source_text').value.trim();
+  const english = document.getElementById('english').value.trim();
+
+  if (!sourceText || !english) {
+    showResult('error', 'Dholuo text and English translation are required.');
+    return;
+  }
+
+  const payload = {
+    source_text: sourceText,
+    english: english,
+    category: document.getElementById('category').value,
+    dialect: document.getElementById('dialect').value,
+    example_source: document.getElementById('example_source').value,
+    example_english: document.getElementById('example_english').value,
+    notes: document.getElementById('notes').value
+  };
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText);
+    }
+
+    const entry = await response.json();
+    showResult('success', `Submitted! "${entry.source_text}" is now pending review.`);
+    clearForm();
+
+  } catch (err) {
+    showResult('error', 'Something went wrong: ' + err.message);
+  }
+}
+
+function showResult(type, message) {
+  const el = document.getElementById('result');
+  el.className = type;
+  el.textContent = message;
+}
+
+function clearForm() {
+  document.getElementById('source_text').value = '';
+  document.getElementById('english').value = '';
+  document.getElementById('example_source').value = '';
+  document.getElementById('example_english').value = '';
+  document.getElementById('notes').value = '';
+}
+</script>
+
+</body>
+</html>

@@ -55,8 +55,29 @@ func main() {
 	http.HandleFunc("GET /api/v1/stats", handlers.GetStats)
 
 	log.Printf("Loba API starting on port %s", port)
-	err = http.ListenAndServe(":"+port, nil)
+	err = http.ListenAndServe(":"+port, withCORS(http.DefaultServeMux))
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// withCORS wraps every request with headers that allow the
+// frontend (running on a different port) to call this API.
+// In production this will be restricted to loba.dev specifically —
+// for local development we allow any origin.
+func withCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		// Browsers send an OPTIONS request first to check permissions
+		// before the real request — respond OK immediately for these
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
