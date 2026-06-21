@@ -74,7 +74,8 @@ func CreateEntry(w http.ResponseWriter, r *http.Request) {
 		RETURNING id, language_id, source_text, english,
 			part_of_speech, explanation, english_equivalent,
 			example_source, example_english, notes, category,
-			dialect, status, vote_score, created_at`,
+			dialect, contributor_id, source, source_url,
+			status, vote_score, created_at`,
 		req.LanguageID, req.SourceText, req.English, req.PartOfSpeech,
 		req.Explanation, req.EnglishEquivalent, req.ExampleSource,
 		req.ExampleEnglish, req.Notes, req.Category, req.Dialect,
@@ -83,8 +84,9 @@ func CreateEntry(w http.ResponseWriter, r *http.Request) {
 		&entry.ID, &entry.LanguageID, &entry.SourceText, &entry.English,
 		&entry.PartOfSpeech, &entry.Explanation, &entry.EnglishEquivalent,
 		&entry.ExampleSource, &entry.ExampleEnglish, &entry.Notes,
-		&entry.Category, &entry.Dialect, &entry.Status,
-		&entry.VoteScore, &entry.CreatedAt,
+		&entry.Category, &entry.Dialect, &entry.ContributorID,
+		&entry.Source, &entry.SourceURL,
+		&entry.Status, &entry.VoteScore, &entry.CreatedAt,
 	)
 	if err != nil {
 		http.Error(w, "could not create entry: "+err.Error(), http.StatusInternalServerError)
@@ -127,7 +129,7 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 			context.Background(),
 			`SELECT id, language_id, source_text, english, part_of_speech,
 				explanation, english_equivalent, example_source, example_english,
-				notes, category, dialect, status, vote_score, created_at
+				notes, category, dialect, contributor_id, status, vote_score, created_at
 			FROM entries
 			WHERE status = $1 AND category = $2
 			ORDER BY created_at DESC`,
@@ -138,7 +140,7 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 			context.Background(),
 			`SELECT id, language_id, source_text, english, part_of_speech,
 				explanation, english_equivalent, example_source, example_english,
-				notes, category, dialect, status, vote_score, created_at
+				notes, category, dialect, contributor_id, status, vote_score, created_at
 			FROM entries
 			WHERE status = $1
 			ORDER BY created_at DESC`,
@@ -160,7 +162,7 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 			&e.ID, &e.LanguageID, &e.SourceText, &e.English,
 			&e.PartOfSpeech, &e.Explanation, &e.EnglishEquivalent,
 			&e.ExampleSource, &e.ExampleEnglish, &e.Notes,
-			&e.Category, &e.Dialect, &e.Status,
+			&e.Category, &e.Dialect, &e.ContributorID, &e.Status,
 			&e.VoteScore, &e.CreatedAt,
 		)
 		if err != nil {
@@ -403,4 +405,44 @@ func GetStats(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stats)
+}
+
+// GetOrCreateContributor handles POST /api/v1/contributors
+// Looks up a contributor by username. If they don't exist yet,
+// creates them. This is a simple stand-in for proper auth —
+// it will be replaced by GitHub OAuth in Phase 2.
+func GetOrCreateContributor(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Username string `json:"username"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil || req.Username == "" {
+		http.Error(w, "username is required", http.StatusBadRequest)
+		return
+	}
+
+	var id string
+	err = db.DB.QueryRow(
+		context.Background(),
+		`INSERT INTO contributors (username)
+		VALUES ($1)
+		ON CONFLICT (username) DO UPDATE SET username = EXCLUDED.username
+		RETURNING id`,
+		req.Username,
+	).Scan(&id)
+	if err != nil {
+		http.Error(w, "could not get or create contributor: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"id":       id,
+		"username": req.Username,
+	})
 }

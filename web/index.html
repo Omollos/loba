@@ -12,6 +12,9 @@
   <h1>loba.</h1>
   <p class="sub">Add a Dholuo entry to the corpus.</p>
 
+  <label>Your username *</label>
+  <input type="text" id="username" placeholder="e.g. stevomondi">
+
   <label>Dholuo text *</label>
   <input type="text" id="source_text" placeholder="e.g. Chuny">
 
@@ -54,27 +57,41 @@
 
 <script>
 const API_URL = "http://localhost:8080/api/v1/entries";
+const CONTRIBUTORS_URL = "http://localhost:8080/api/v1/contributors";
 
 async function submitEntry() {
+  const username = document.getElementById('username').value.trim();
   const sourceText = document.getElementById('source_text').value.trim();
   const english = document.getElementById('english').value.trim();
 
-  if (!sourceText || !english) {
-    showResult('error', 'Dholuo text and English translation are required.');
+  if (!username || !sourceText || !english) {
+    showResult('error', 'Username, Dholuo text, and English translation are required.');
     return;
   }
 
-  const payload = {
-    source_text: sourceText,
-    english: english,
-    category: document.getElementById('category').value,
-    dialect: document.getElementById('dialect').value,
-    example_source: document.getElementById('example_source').value,
-    example_english: document.getElementById('example_english').value,
-    notes: document.getElementById('notes').value
-  };
-
   try {
+    // Step 1 — get or create the contributor, get their ID back
+    const contributorResponse = await fetch(CONTRIBUTORS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username })
+    });
+
+    if (!contributorResponse.ok) throw new Error('Could not identify contributor');
+    const contributor = await contributorResponse.json();
+
+    // Step 2 — submit the entry, now including the contributor_id
+    const payload = {
+      source_text: sourceText,
+      english: english,
+      category: document.getElementById('category').value,
+      dialect: document.getElementById('dialect').value,
+      example_source: document.getElementById('example_source').value,
+      example_english: document.getElementById('example_english').value,
+      notes: document.getElementById('notes').value,
+      contributor_id: contributor.id
+    };
+
     const response = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
