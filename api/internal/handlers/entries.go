@@ -230,3 +230,104 @@ func UpdateEntryStatus(newStatus string) http.HandlerFunc {
 		json.NewEncoder(w).Encode(entry)
 	}
 }
+
+// CastVote handles POST /api/v1/entries/{id}/vote
+// Records a vote from a contributor and updates the entry's
+// running vote_score. One vote per contributor per entry —
+// enforced by the database's PRIMARY KEY on (entry_id, voter_id).
+func CastVote(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	entryID := r.PathValue("id")
+	if entryID == "" {
+		http.Error(w, "entry id is required", http.StatusBadRequest)
+		return
+	}
+
+	// Expected body: { "voter_id": "uuid", "vote": 1 }
+	var req struct {
+		VoterID string `json:"voter_id"`
+		Vote    int    `json:"vote"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.VoterID == "" {
+		http.Error(w, "voter_id is required", http.StatusBadRequest)
+		return
+	}
+	if req.Vote != 1 && req.Vote != -1 {
+		http.Error(w, "vote must be 1 or -1", http.StatusBadRequest)
+		return
+	}
+
+	// Use a transaction — both the vote insert and the score
+	// update must succeed together, or neither happens.
+	// This prevents the vote_score from ever drifting out of
+	// sync with the actual votes recorded.
+	tx, err := db.DB.Begin(context.Background())
+	if err != nil {
+		http.Error(w, "could not start transaction", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback(context.Background()) // safe no-op if Commit succeeds
+
+	// Insert the vote. If this contributor already voted on this
+	// entry, ON CONFLICT updates their existing vote instead of
+	// erroring or creating a duplicate.
+	_, err = tx.Exec(
+		context.Background(),
+		`INSERT INTO votes (entry_id, voter_id, vote)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (entry_id, voter_id)
+		DO UPDATE SET vote = $3, voted_at = now()`,
+		entryID, req.VoterID, req.Vote,
+	)
+	if err != nil {
+		http.Error(w, "could not record vote: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Recalculate vote_score as the sum of all votes for this entry
+	// Recalculating rather than incrementing means the score is
+	// always accurate even if a contributor changes their vote
+	var newScore int
+	err = tx.QueryRow(
+		context.Background(),
+		`SELECT COALESCE(SUM(vote), 0) FROM votes WHERE entry_id = $1`,
+		entryID,
+	).Scan(&newScore)
+	if err != nil {
+		http.Error(w, "could not calculate vote score", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = tx.Exec(
+		context.Background(),
+		`UPDATE entries SET vote_score = $1 WHERE id = $2`,
+		newScore, entryID,
+	)
+	if err != nil {
+		http.Error(w, "could not update vote score", http.StatusInternalServerError)
+		return
+	}
+
+	// Commit the transaction — both changes are now permanent together
+	err = tx.Commit(context.Background())
+	if err != nil {
+		http.Error(w, "could not commit transaction", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"entry_id":   entryID,
+		"vote_score": newScore,
+	})
+}

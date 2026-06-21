@@ -51,6 +51,7 @@ func main() {
 	// Approve / flag — Go 1.22 path patterns with {id}
 	http.HandleFunc("PUT /api/v1/entries/{id}/approve", handlers.UpdateEntryStatus("approved"))
 	http.HandleFunc("PUT /api/v1/entries/{id}/flag", handlers.UpdateEntryStatus("flagged"))
+	http.HandleFunc("POST /api/v1/entries/{id}/vote", handlers.CastVote)
 
 	log.Printf("Loba API starting on port %s", port)
 	err = http.ListenAndServe(":"+port, nil)
