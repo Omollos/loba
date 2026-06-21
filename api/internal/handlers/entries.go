@@ -331,3 +331,76 @@ func CastVote(w http.ResponseWriter, r *http.Request) {
 		"vote_score": newScore,
 	})
 }
+
+// GetStats handles GET /api/v1/stats
+// Returns corpus-wide totals used to power dashboards
+// like the progress bars and stats strip on the landing page.
+func GetStats(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	type Stats struct {
+		TotalApproved     int            `json:"total_approved"`
+		TotalPending      int            `json:"total_pending"`
+		TotalFlagged      int            `json:"total_flagged"`
+		TotalContributors int            `json:"total_contributors"`
+		ByCategory        map[string]int `json:"by_category"`
+	}
+
+	var stats Stats
+	stats.ByCategory = make(map[string]int)
+
+	// Count entries by status
+	err := db.DB.QueryRow(
+		context.Background(),
+		`SELECT
+			COUNT(*) FILTER (WHERE status = 'approved'),
+			COUNT(*) FILTER (WHERE status = 'pending'),
+			COUNT(*) FILTER (WHERE status = 'flagged')
+		FROM entries`,
+	).Scan(&stats.TotalApproved, &stats.TotalPending, &stats.TotalFlagged)
+	if err != nil {
+		http.Error(w, "could not fetch entry stats", http.StatusInternalServerError)
+		return
+	}
+
+	// Count total contributors
+	err = db.DB.QueryRow(
+		context.Background(),
+		`SELECT COUNT(*) FROM contributors`,
+	).Scan(&stats.TotalContributors)
+	if err != nil {
+		http.Error(w, "could not fetch contributor count", http.StatusInternalServerError)
+		return
+	}
+
+	// Count approved entries grouped by category
+	rows, err := db.DB.Query(
+		context.Background(),
+		`SELECT category, COUNT(*)
+		FROM entries
+		WHERE status = 'approved' AND category IS NOT NULL
+		GROUP BY category
+		ORDER BY COUNT(*) DESC`,
+	)
+	if err != nil {
+		http.Error(w, "could not fetch category breakdown", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var category string
+		var count int
+		if err := rows.Scan(&category, &count); err != nil {
+			http.Error(w, "error reading category stats", http.StatusInternalServerError)
+			return
+		}
+		stats.ByCategory[category] = count
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stats)
+}

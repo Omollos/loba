@@ -52,6 +52,7 @@ func main() {
 	http.HandleFunc("PUT /api/v1/entries/{id}/approve", handlers.UpdateEntryStatus("approved"))
 	http.HandleFunc("PUT /api/v1/entries/{id}/flag", handlers.UpdateEntryStatus("flagged"))
 	http.HandleFunc("POST /api/v1/entries/{id}/vote", handlers.CastVote)
+	http.HandleFunc("GET /api/v1/stats", handlers.GetStats)
 
 	log.Printf("Loba API starting on port %s", port)
 	err = http.ListenAndServe(":"+port, nil)
