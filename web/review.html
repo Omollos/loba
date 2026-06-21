@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loba — Review queue</title>
+<link rel="stylesheet" href="styles/loba.css">
+</head>
+<body>
+
+<div class="card wide-card">
+  <h1>loba.</h1>
+  <p class="sub">Review pending entries before they join the public corpus.</p>
+
+  <div id="queue">
+    <div class="loading">Loading pending entries...</div>
+  </div>
+</div>
+
+<script>
+const API_URL = "http://localhost:8080/api/v1/entries";
+
+async function loadQueue() {
+  const queueEl = document.getElementById('queue');
+
+  try {
+    const response = await fetch(`${API_URL}?status=pending`);
+    if (!response.ok) throw new Error('Failed to load entries');
+
+    const entries = await response.json();
+
+    if (entries.length === 0) {
+      queueEl.innerHTML = '<div class="empty-state">No pending entries. The queue is clear.</div>';
+      return;
+    }
+
+    queueEl.innerHTML = entries.map(entry => `
+      <div class="entry-row" id="row-${entry.id}">
+        <div class="entry-source">${escapeHtml(entry.source_text)}</div>
+        <div class="entry-english">${escapeHtml(entry.english)}</div>
+        <div class="entry-meta">
+          ${entry.category ? `<span class="badge">${escapeHtml(entry.category)}</span>` : ''}
+          ${entry.dialect ? `<span class="badge">${escapeHtml(entry.dialect)}</span>` : ''}
+        </div>
+        ${entry.notes ? `<div class="entry-english" style="font-style: italic; margin-bottom: 10px;">${escapeHtml(entry.notes)}</div>` : ''}
+        <div class="entry-actions">
+          <button class="btn-approve" onclick="updateStatus('${entry.id}', 'approve')">Approve</button>
+          <button class="btn-flag" onclick="updateStatus('${entry.id}', 'flag')">Flag</button>
+        </div>
+      </div>
+    `).join('');
+
+  } catch (err) {
+    queueEl.innerHTML = `<div class="empty-state">Could not load entries: ${err.message}</div>`;
+  }
+}
+
+async function updateStatus(id, action) {
+  try {
+    const response = await fetch(`${API_URL}/${id}/${action}`, {
+      method: 'PUT'
+    });
+
+    if (!response.ok) throw new Error('Update failed');
+
+    // Remove the row from view immediately rather than reloading everything
+    const row = document.getElementById(`row-${id}`);
+    row.style.opacity = '0.3';
+    setTimeout(() => {
+      row.remove();
+      // If queue is now empty, show the empty state
+      if (document.querySelectorAll('.entry-row').length === 0) {
+        document.getElementById('queue').innerHTML =
+          '<div class="empty-state">No pending entries. The queue is clear.</div>';
+      }
+    }, 200);
+
+  } catch (err) {
+    alert('Could not update entry: ' + err.message);
+  }
+}
+
+// Basic HTML escaping to prevent any submitted content
+// from being interpreted as HTML/script in the browser
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+loadQueue();
+</script>
+
+</body>
+</html>
