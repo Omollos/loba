@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/joho/godotenv"
 	"github.com/Omollos/loba/api/internal/db"
 	"github.com/Omollos/loba/api/internal/handlers"
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -47,6 +47,10 @@ func main() {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
+
+	// Approve / flag — Go 1.22 path patterns with {id}
+	http.HandleFunc("PUT /api/v1/entries/{id}/approve", handlers.UpdateEntryStatus("approved"))
+	http.HandleFunc("PUT /api/v1/entries/{id}/flag", handlers.UpdateEntryStatus("flagged"))
 
 	log.Printf("Loba API starting on port %s", port)
 	err = http.ListenAndServe(":"+port, nil)

@@ -184,3 +184,49 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(entries)
 }
+
+// UpdateEntryStatus handles PUT /api/v1/entries/{id}/approve
+// and PUT /api/v1/entries/{id}/flag
+// The status to set is determined by which route called it.
+func UpdateEntryStatus(newStatus string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Extract the {id} from the URL path pattern
+		id := r.PathValue("id")
+		if id == "" {
+			http.Error(w, "entry id is required", http.StatusBadRequest)
+			return
+		}
+
+		// Update the entry's status and set reviewed_at to now
+		var entry models.Entry
+		err := db.DB.QueryRow(
+			context.Background(),
+			`UPDATE entries
+			SET status = $1, reviewed_at = now()
+			WHERE id = $2
+			RETURNING id, language_id, source_text, english,
+				part_of_speech, explanation, english_equivalent,
+				example_source, example_english, notes, category,
+				dialect, status, vote_score, created_at, reviewed_at`,
+			newStatus, id,
+		).Scan(
+			&entry.ID, &entry.LanguageID, &entry.SourceText, &entry.English,
+			&entry.PartOfSpeech, &entry.Explanation, &entry.EnglishEquivalent,
+			&entry.ExampleSource, &entry.ExampleEnglish, &entry.Notes,
+			&entry.Category, &entry.Dialect, &entry.Status,
+			&entry.VoteScore, &entry.CreatedAt, &entry.ReviewedAt,
+		)
+		if err != nil {
+			http.Error(w, "entry not found or update failed: "+err.Error(), http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(entry)
+	}
+}
