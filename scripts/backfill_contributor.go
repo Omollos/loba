@@ -1,3 +1,5 @@
+// One-time script — already executed on 2025-06-21
+// Removes the test contributor created during development
 package main
 
 import (
