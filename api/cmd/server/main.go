@@ -58,6 +58,7 @@ func main() {
 	http.HandleFunc("GET /api/v1/export/jsonl", handlers.ExportJSONL)
 	http.HandleFunc("GET /api/v1/export/csv", handlers.ExportCSV)
 	http.HandleFunc("GET /api/v1/languages", handlers.GetLanguages)
+	http.HandleFunc("DELETE /api/v1/entries/{id}", handlers.DeleteEntry)
 
 	log.Printf("Loba API starting on port %s", port)
 	err = http.ListenAndServe(":"+port, withCORS(http.DefaultServeMux))

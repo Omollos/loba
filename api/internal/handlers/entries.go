@@ -3,9 +3,9 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
-	"fmt"
 
 	"github.com/Omollos/loba/api/internal/db"
 	"github.com/Omollos/loba/api/internal/models"
@@ -223,32 +223,39 @@ func UpdateEntryStatus(newStatus string) http.HandlerFunc {
 		// Reviewers can optionally set a rating when approving
 		// Body is optional — if empty, rating stays as is
 		var req struct {
-			Rating string `json:"rating"`
+			Rating     string `json:"rating"`
+			FlagReason string `json:"flag_reason"`
 		}
 		json.NewDecoder(r.Body).Decode(&req)
 
-		// Default to general if not specified
 		if req.Rating == "" {
 			req.Rating = "general"
+		}
+
+		var flagReason *string
+		if req.FlagReason != "" {
+			flagReason = &req.FlagReason
 		}
 
 		var entry models.Entry
 		err := db.DB.QueryRow(
 			context.Background(),
 			`UPDATE entries
-			SET status = $1, rating = $2, reviewed_at = now()
-			WHERE id = $3
+			SET status = $1, rating = $2, flag_reason = $3, reviewed_at = now()
+			WHERE id = $4
 			RETURNING id, language_id, source_text, english,
 				part_of_speech, explanation, english_equivalent,
 				example_source, example_english, notes, category,
-				dialect, status, vote_score, rating, created_at, reviewed_at`,
-			newStatus, req.Rating, id,
+				dialect, status, vote_score, rating, flag_reason,
+				created_at, reviewed_at`,
+			newStatus, req.Rating, flagReason, id,
 		).Scan(
 			&entry.ID, &entry.LanguageID, &entry.SourceText, &entry.English,
 			&entry.PartOfSpeech, &entry.Explanation, &entry.EnglishEquivalent,
 			&entry.ExampleSource, &entry.ExampleEnglish, &entry.Notes,
 			&entry.Category, &entry.Dialect, &entry.Status,
-			&entry.VoteScore, &entry.Rating, &entry.CreatedAt, &entry.ReviewedAt,
+			&entry.VoteScore, &entry.Rating, &entry.FlagReason,
+			&entry.CreatedAt, &entry.ReviewedAt,
 		)
 		if err != nil {
 			http.Error(w, "entry not found or update failed: "+err.Error(), http.StatusNotFound)
@@ -259,6 +266,7 @@ func UpdateEntryStatus(newStatus string) http.HandlerFunc {
 		json.NewEncoder(w).Encode(entry)
 	}
 }
+
 // CastVote handles POST /api/v1/entries/{id}/vote
 // Records a vote from a contributor and updates the entry's
 // running vote_score. One vote per contributor per entry —
@@ -779,4 +787,42 @@ func GetLanguages(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(languages)
+}
+
+// DeleteEntry handles DELETE /api/v1/entries/{id}
+// Permanently removes an entry — only used from the review queue
+// on flagged entries that are confirmed as invalid.
+// This action is irreversible.
+func DeleteEntry(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "entry id is required", http.StatusBadRequest)
+		return
+	}
+
+	result, err := db.DB.Exec(
+		context.Background(),
+		`DELETE FROM entries WHERE id = $1`,
+		id,
+	)
+	if err != nil {
+		http.Error(w, "could not delete entry: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if result.RowsAffected() == 0 {
+		http.Error(w, "entry not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "entry deleted",
+		"id":      id,
+	})
 }

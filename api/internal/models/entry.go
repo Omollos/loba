@@ -23,6 +23,7 @@ type Entry struct {
 	Status            string     `json:"status"`
 	VoteScore         int        `json:"vote_score"`
 	Rating            string     `json:"rating"`
+	FlagReason        *string    `json:"flag_reason,omitempty"`
 	CreatedAt         time.Time  `json:"created_at"`
 	ReviewedAt        *time.Time `json:"reviewed_at,omitempty"`
 }

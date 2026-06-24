@@ -8,97 +8,283 @@
 </head>
 <body>
 
+<nav class="nav">
+  <a href="dictionary.html" class="nav-logo">loba<span>.</span></a>
+  <div class="nav-links">
+    <a href="dictionary.html">Dictionary</a>
+    <a href="leaderboard.html">Contributors</a>
+    <a href="about.html">About</a>
+    <a href="index.html" class="nav-contribute">Contribute</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
 <div class="card wide-card">
-  <h1>loba.</h1>
-  <p class="sub">Review pending entries before they join the public corpus.</p>
+  <p class="sub" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem;">Review queue</p>
+
+  <div style="display: flex; gap: 8px; margin-bottom: 1.5rem;">
+    <button class="queue-tab active" onclick="switchTab('pending', this)">
+      Pending <span id="pending-count" style="font-size: 11px; background: #F5F0E8; padding: 2px 7px; border-radius: 10px; margin-left: 4px;"></span>
+    </button>
+    <button class="queue-tab" onclick="switchTab('flagged', this)">
+      Flagged <span id="flagged-count" style="font-size: 11px; background: #F5F0E8; padding: 2px 7px; border-radius: 10px; margin-left: 4px;"></span>
+    </button>
+  </div>
 
   <div id="queue">
-    <div class="loading">Loading pending entries...</div>
+    <div class="loading">Loading...</div>
   </div>
 </div>
+</div>
+
+<style>
+.queue-tab {
+  font-size: 13px;
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 0.5px solid rgba(26,26,24,0.15);
+  background: none;
+  cursor: pointer;
+  color: #6B6860;
+  font-family: inherit;
+}
+.queue-tab.active {
+  background: #1A1A18;
+  color: #F5F0E8;
+  border-color: #1A1A18;
+}
+.flag-reason-input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 0.5px solid rgba(26,26,24,0.15);
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  margin-bottom: 8px;
+  resize: none;
+  min-height: 52px;
+}
+.flag-reason-display {
+  font-size: 12px;
+  color: #993C1D;
+  background: #FAECE7;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  font-style: italic;
+}
+.btn-reopen {
+  background: #E6F1FB;
+  color: #185FA5;
+  border: 0.5px solid #B5D4F4;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.btn-delete {
+  background: #FCEBEB;
+  color: #A32D2D;
+  border: 0.5px solid #F7C1C1;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+}
+</style>
 
 <script>
 const API_URL = "http://localhost:8080/api/v1/entries";
+let currentTab = 'pending';
 
-async function loadQueue() {
-  const queueEl = document.getElementById('queue');
+async function loadQueue(status) {
+  const el = document.getElementById('queue');
+  el.innerHTML = '<div class="loading">Loading...</div>';
 
   try {
-    const response = await fetch(`${API_URL}?status=pending`);
-    if (!response.ok) throw new Error('Failed to load entries');
+    const response = await fetch(`${API_URL}?status=${status}&rating=general&rating=mature&rating=restricted`);
 
-    const entries = await response.json();
+    // fetch all ratings for review queue
+    const r = await fetch(`${API_URL}?status=${status}`);
+    if (!r.ok) throw new Error('Failed to load');
+    const entries = await r.json();
+
+    // update count badge
+    document.getElementById(`${status}-count`).textContent = entries.length;
 
     if (entries.length === 0) {
-      queueEl.innerHTML = '<div class="empty-state">No pending entries. The queue is clear.</div>';
+      el.innerHTML = `<div class="empty-state">${
+        status === 'pending'
+          ? 'No pending entries. Queue is clear.'
+          : 'No flagged entries.'
+      }</div>`;
       return;
     }
 
-    queueEl.innerHTML = entries.map(entry => `
+    el.innerHTML = entries.map(entry => `
       <div class="entry-row" id="row-${entry.id}">
         <div class="entry-source">${escapeHtml(entry.source_text)}</div>
         <div class="entry-english">${escapeHtml(entry.english)}</div>
         <div class="entry-meta">
           ${entry.category ? `<span class="badge">${escapeHtml(entry.category)}</span>` : ''}
           ${entry.dialect ? `<span class="badge">${escapeHtml(entry.dialect)}</span>` : ''}
+          ${entry.contributor_id ? `<span class="badge">contributor on record</span>` : ''}
         </div>
-        ${entry.notes ? `<div class="entry-english" style="font-style: italic; margin-bottom: 10px;">${escapeHtml(entry.notes)}</div>` : ''}
-        <div class="entry-actions" style="align-items: center; flex-wrap: wrap; gap: 8px;">
-          <select id="rating-${entry.id}" style="font-size: 12px; padding: 5px 10px; border-radius: 8px; border: 0.5px solid rgba(26,26,24,0.15);">
-            <option value="general">General</option>
-            <option value="mature">Mature</option>
-            <option value="restricted">Restricted</option>
-          </select>
-          <button class="btn-approve" onclick="updateStatus('${entry.id}', 'approve')">Approve</button>
-          <button class="btn-flag" onclick="updateStatus('${entry.id}', 'flag')">Flag</button>
-        </div>
+        ${entry.example_source ? `<div style="font-size:13px;font-style:italic;color:#1A1A18;margin-bottom:3px;">${escapeHtml(entry.example_source)}</div>` : ''}
+        ${entry.example_english ? `<div style="font-size:13px;color:#6B6860;margin-bottom:8px;">${escapeHtml(entry.example_english)}</div>` : ''}
+        ${entry.notes ? `<div style="font-size:12px;color:#6B6860;margin-bottom:8px;">${escapeHtml(entry.notes)}</div>` : ''}
+
+        ${status === 'flagged' && entry.flag_reason ? `
+          <div class="flag-reason-display">
+            Flag reason: ${escapeHtml(entry.flag_reason)}
+          </div>
+        ` : ''}
+
+        ${status === 'pending' ? `
+          <div style="margin-bottom: 8px;">
+            <select id="rating-${entry.id}" style="font-size: 12px; padding: 5px 10px; border-radius: 8px; border: 0.5px solid rgba(26,26,24,0.15); margin-bottom: 6px;">
+              <option value="general">General — safe for all audiences</option>
+              <option value="mature">Mature — valid but not for public dictionary</option>
+              <option value="restricted">Restricted — private corpus only</option>
+            </select>
+            <textarea
+              id="flag-reason-${entry.id}"
+              class="flag-reason-input"
+              placeholder="Flag reason (required when flagging)..."
+              style="display:none;"
+            ></textarea>
+          </div>
+          <div class="entry-actions">
+            <button class="btn-approve" onclick="approveEntry('${entry.id}')">Approve</button>
+            <button class="btn-flag" onclick="showFlagReason('${entry.id}')">Flag</button>
+          </div>
+        ` : `
+          <div class="entry-actions">
+            <button class="btn-approve" onclick="reopenEntry('${entry.id}')">Move to pending</button>
+            <button class="btn-delete" onclick="deleteEntry('${entry.id}')">Delete permanently</button>
+          </div>
+        `}
       </div>
     `).join('');
 
   } catch (err) {
-    queueEl.innerHTML = `<div class="empty-state">Could not load entries: ${err.message}</div>`;
+    el.innerHTML = `<div class="empty-state">Could not load: ${err.message}</div>`;
   }
 }
 
-async function updateStatus(id, action) {
-  try {
-    const ratingEl = document.getElementById(`rating-${id}`);
-    const rating = ratingEl ? ratingEl.value : 'general';
+function showFlagReason(id) {
+  const textarea = document.getElementById(`flag-reason-${id}`);
+  textarea.style.display = 'block';
+  textarea.focus();
+  // Replace flag button with confirm button
+  const actions = textarea.closest('.entry-row').querySelector('.entry-actions');
+  actions.innerHTML = `
+    <button class="btn-approve" onclick="approveEntry('${id}')">Approve</button>
+    <button class="btn-flag" onclick="confirmFlag('${id}')">Confirm flag</button>
+    <button onclick="cancelFlag('${id}')" style="font-size:13px;background:none;border:none;color:#6B6860;cursor:pointer;">Cancel</button>
+  `;
+}
 
+function cancelFlag(id) {
+  const textarea = document.getElementById(`flag-reason-${id}`);
+  textarea.style.display = 'none';
+  const actions = textarea.closest('.entry-row').querySelector('.entry-actions');
+  actions.innerHTML = `
+    <button class="btn-approve" onclick="approveEntry('${id}')">Approve</button>
+    <button class="btn-flag" onclick="showFlagReason('${id}')">Flag</button>
+  `;
+}
+
+async function approveEntry(id) {
+  const ratingEl = document.getElementById(`rating-${id}`);
+  const rating = ratingEl ? ratingEl.value : 'general';
+  await updateStatus(id, 'approve', rating, '');
+}
+
+async function confirmFlag(id) {
+  const reasonEl = document.getElementById(`flag-reason-${id}`);
+  const reason = reasonEl ? reasonEl.value.trim() : '';
+  if (!reason) {
+    alert('Please enter a reason for flagging this entry.');
+    return;
+  }
+  await updateStatus(id, 'flag', 'general', reason);
+}
+
+async function reopenEntry(id) {
+  await updateStatus(id, 'approve', 'general', '');
+}
+
+async function deleteEntry(id) {
+  if (!confirm('Permanently delete this entry? This cannot be undone.')) return;
+  try {
+    const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Delete failed');
+    removeRow(id);
+  } catch (err) {
+    alert('Could not delete: ' + err.message);
+  }
+}
+
+async function updateStatus(id, action, rating, flagReason) {
+  try {
     const response = await fetch(`${API_URL}/${id}/${action}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rating: rating })
+      body: JSON.stringify({ rating, flag_reason: flagReason })
     });
-
     if (!response.ok) throw new Error('Update failed');
-
-    // Remove the row from view immediately rather than reloading everything
-    const row = document.getElementById(`row-${id}`);
-    row.style.opacity = '0.3';
-    setTimeout(() => {
-      row.remove();
-      // If queue is now empty, show the empty state
-      if (document.querySelectorAll('.entry-row').length === 0) {
-        document.getElementById('queue').innerHTML =
-          '<div class="empty-state">No pending entries. The queue is clear.</div>';
-      }
-    }, 200);
-
+    removeRow(id);
+    // Refresh counts
+    loadCounts();
   } catch (err) {
     alert('Could not update entry: ' + err.message);
   }
 }
 
-// Basic HTML escaping to prevent any submitted content
-// from being interpreted as HTML/script in the browser
+function removeRow(id) {
+  const row = document.getElementById(`row-${id}`);
+  if (row) {
+    row.style.opacity = '0.3';
+    setTimeout(() => {
+      row.remove();
+      if (document.querySelectorAll('.entry-row').length === 0) {
+        document.getElementById('queue').innerHTML =
+          `<div class="empty-state">${currentTab === 'pending' ? 'Queue is clear.' : 'No flagged entries.'}</div>`;
+      }
+    }, 200);
+  }
+}
+
+async function loadCounts() {
+  try {
+    const [pendingRes, flaggedRes] = await Promise.all([
+      fetch(`${API_URL}?status=pending`),
+      fetch(`${API_URL}?status=flagged`)
+    ]);
+    const pending = await pendingRes.json();
+    const flagged = await flaggedRes.json();
+    document.getElementById('pending-count').textContent = pending.length;
+    document.getElementById('flagged-count').textContent = flagged.length;
+  } catch {}
+}
+
+function switchTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.queue-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadQueue(tab);
+}
+
 function escapeHtml(text) {
+  if (!text) return '';
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
 
-loadQueue();
+loadQueue('pending');
+loadCounts();
 </script>
 
 </body>
