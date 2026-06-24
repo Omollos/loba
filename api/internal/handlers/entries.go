@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+	"fmt"
 
 	"github.com/Omollos/loba/api/internal/db"
 	"github.com/Omollos/loba/api/internal/models"
@@ -111,6 +112,7 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 
 	// Read optional query parameters for filtering
 	category := r.URL.Query().Get("category")
+	lang := r.URL.Query().Get("lang")
 	status := r.URL.Query().Get("status")
 	if status == "" {
 		status = "approved" // default to approved entries only
@@ -127,24 +129,29 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 	if category != "" {
 		rows, err = db.DB.Query(
 			context.Background(),
-			`SELECT id, language_id, source_text, english, part_of_speech,
-				explanation, english_equivalent, example_source, example_english,
-				notes, category, dialect, contributor_id, status, vote_score, created_at
-			FROM entries
-			WHERE status = $1 AND category = $2
-			ORDER BY created_at DESC`,
-			status, category,
+			`SELECT e.id, e.language_id, e.source_text, e.english, e.part_of_speech,
+				e.explanation, e.english_equivalent, e.example_source, e.example_english,
+				e.notes, e.category, e.dialect, e.contributor_id, e.status, e.vote_score, e.created_at
+			FROM entries e
+			JOIN languages l ON l.id = e.language_id
+			WHERE e.status = $1
+			AND e.category = $2
+			AND ($3 = '' OR l.code = $3)
+			ORDER BY e.created_at DESC`,
+			status, category, lang,
 		)
 	} else {
 		rows, err = db.DB.Query(
 			context.Background(),
-			`SELECT id, language_id, source_text, english, part_of_speech,
-				explanation, english_equivalent, example_source, example_english,
-				notes, category, dialect, contributor_id, status, vote_score, created_at
-			FROM entries
-			WHERE status = $1
-			ORDER BY created_at DESC`,
-			status,
+			`SELECT e.id, e.language_id, e.source_text, e.english, e.part_of_speech,
+				e.explanation, e.english_equivalent, e.example_source, e.example_english,
+				e.notes, e.category, e.dialect, e.contributor_id, e.status, e.vote_score, e.created_at
+			FROM entries e
+			JOIN languages l ON l.id = e.language_id
+			WHERE e.status = $1
+			AND ($2 = '' OR l.code = $2)
+			ORDER BY e.created_at DESC`,
+			status, lang,
 		)
 	}
 
@@ -492,4 +499,254 @@ func GetLeaderboard(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(leaderboard)
+}
+
+// ExportJSONL handles GET /api/v1/export/jsonl
+// Returns all approved entries as JSONL (one JSON object per line)
+// This is the format used for LLM fine-tuning and NLP research.
+func ExportJSONL(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Optional language filter e.g. ?lang=luo
+	lang := r.URL.Query().Get("lang")
+
+	var rows interface {
+		Next() bool
+		Scan(...interface{}) error
+		Err() error
+		Close()
+	}
+	var err error
+
+	if lang != "" {
+		rows, err = db.DB.Query(
+			context.Background(),
+			`SELECT e.source_text, e.english, e.explanation,
+				e.english_equivalent, e.example_source,
+				e.example_english, e.category, e.dialect,
+				e.part_of_speech, e.notes, l.code, l.name
+			FROM entries e
+			JOIN languages l ON l.id = e.language_id
+			WHERE e.status = 'approved' AND l.code = $1
+			ORDER BY e.created_at ASC`,
+			lang,
+		)
+	} else {
+		rows, err = db.DB.Query(
+			context.Background(),
+			`SELECT e.source_text, e.english, e.explanation,
+				e.english_equivalent, e.example_source,
+				e.example_english, e.category, e.dialect,
+				e.part_of_speech, e.notes, l.code, l.name
+			FROM entries e
+			JOIN languages l ON l.id = e.language_id
+			WHERE e.status = 'approved'
+			ORDER BY e.created_at ASC`,
+		)
+	}
+
+	if err != nil {
+		http.Error(w, "could not fetch entries", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	// JSONL — one JSON object per line, no wrapping array
+	// Each line is independently parseable — important for
+	// streaming large datasets into training pipelines
+	w.Header().Set("Content-Type", "application/x-ndjson")
+	w.Header().Set("Content-Disposition", "attachment; filename=loba-corpus.jsonl")
+
+	encoder := json.NewEncoder(w)
+	for rows.Next() {
+		var rec struct {
+			SourceText        string `json:"source_text"`
+			English           string `json:"english"`
+			Explanation       string `json:"explanation,omitempty"`
+			EnglishEquivalent string `json:"english_equivalent,omitempty"`
+			ExampleSource     string `json:"example_source,omitempty"`
+			ExampleEnglish    string `json:"example_english,omitempty"`
+			Category          string `json:"category,omitempty"`
+			Dialect           string `json:"dialect,omitempty"`
+			PartOfSpeech      string `json:"part_of_speech,omitempty"`
+			Notes             string `json:"notes,omitempty"`
+			LanguageCode      string `json:"language_code"`
+			LanguageName      string `json:"language_name"`
+		}
+		err := rows.Scan(
+			&rec.SourceText, &rec.English, &rec.Explanation,
+			&rec.EnglishEquivalent, &rec.ExampleSource,
+			&rec.ExampleEnglish, &rec.Category, &rec.Dialect,
+			&rec.PartOfSpeech, &rec.Notes,
+			&rec.LanguageCode, &rec.LanguageName,
+		)
+		if err != nil {
+			continue
+		}
+		encoder.Encode(rec)
+	}
+}
+
+// ExportCSV handles GET /api/v1/export/csv
+// Returns all approved entries as a CSV file for
+// spreadsheet analysis and academic research use.
+func ExportCSV(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	lang := r.URL.Query().Get("lang")
+
+	var rows interface {
+		Next() bool
+		Scan(...interface{}) error
+		Err() error
+		Close()
+	}
+	var err error
+
+	if lang != "" {
+		rows, err = db.DB.Query(
+			context.Background(),
+			`SELECT e.source_text, e.english, e.explanation,
+				e.english_equivalent, e.example_source,
+				e.example_english, e.category, e.dialect,
+				e.part_of_speech, e.notes, l.code, l.name
+			FROM entries e
+			JOIN languages l ON l.id = e.language_id
+			WHERE e.status = 'approved' AND l.code = $1
+			ORDER BY e.created_at ASC`,
+			lang,
+		)
+	} else {
+		rows, err = db.DB.Query(
+			context.Background(),
+			`SELECT e.source_text, e.english, e.explanation,
+				e.english_equivalent, e.example_source,
+				e.example_english, e.category, e.dialect,
+				e.part_of_speech, e.notes, l.code, l.name
+			FROM entries e
+			JOIN languages l ON l.id = e.language_id
+			WHERE e.status = 'approved'
+			ORDER BY e.created_at ASC`,
+		)
+	}
+
+	if err != nil {
+		http.Error(w, "could not fetch entries", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", "attachment; filename=loba-corpus.csv")
+
+	// Write header row
+	w.Write([]byte("source_text,english,explanation,english_equivalent,example_source,example_english,category,dialect,part_of_speech,notes,language_code,language_name\n"))
+
+	for rows.Next() {
+		var sourceText, english, explanation, englishEquivalent string
+		var exampleSource, exampleEnglish, category, dialect string
+		var partOfSpeech, notes, langCode, langName string
+
+		err := rows.Scan(
+			&sourceText, &english, &explanation,
+			&englishEquivalent, &exampleSource,
+			&exampleEnglish, &category, &dialect,
+			&partOfSpeech, &notes, &langCode, &langName,
+		)
+		if err != nil {
+			continue
+		}
+
+		// Escape any commas or quotes within fields
+		row := fmt.Sprintf("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+			csvEscape(sourceText), csvEscape(english),
+			csvEscape(explanation), csvEscape(englishEquivalent),
+			csvEscape(exampleSource), csvEscape(exampleEnglish),
+			csvEscape(category), csvEscape(dialect),
+			csvEscape(partOfSpeech), csvEscape(notes),
+			csvEscape(langCode), csvEscape(langName),
+		)
+		w.Write([]byte(row))
+	}
+}
+
+// csvEscape wraps a field in quotes if it contains
+// commas, quotes, or newlines — standard CSV escaping
+func csvEscape(s string) string {
+	if s == "" {
+		return ""
+	}
+	// Escape any existing double quotes by doubling them
+	escaped := `"` + replaceAll(s, `"`, `""`) + `"`
+	return escaped
+}
+
+func replaceAll(s, old, new string) string {
+	result := ""
+	for i := 0; i < len(s); {
+		if i+len(old) <= len(s) && s[i:i+len(old)] == old {
+			result += new
+			i += len(old)
+		} else {
+			result += string(s[i])
+			i++
+		}
+	}
+	return result
+}
+
+// GetLanguages handles GET /api/v1/languages
+// Returns all languages in the corpus with their entry counts.
+// Powers the language selector and the about page.
+func GetLanguages(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	rows, err := db.DB.Query(
+		context.Background(),
+		`SELECT l.id, l.code, l.name, l.script, l.region,
+			COUNT(e.id) FILTER (WHERE e.status = 'approved') as entry_count
+		FROM languages l
+		LEFT JOIN entries e ON e.language_id = l.id
+		GROUP BY l.id, l.code, l.name, l.script, l.region
+		ORDER BY entry_count DESC`,
+	)
+	if err != nil {
+		http.Error(w, "could not fetch languages", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	type Language struct {
+		ID         string `json:"id"`
+		Code       string `json:"code"`
+		Name       string `json:"name"`
+		Script     string `json:"script"`
+		Region     string `json:"region"`
+		EntryCount int    `json:"entry_count"`
+	}
+
+	var languages []Language
+	for rows.Next() {
+		var l Language
+		if err := rows.Scan(&l.ID, &l.Code, &l.Name, &l.Script, &l.Region, &l.EntryCount); err != nil {
+			continue
+		}
+		languages = append(languages, l)
+	}
+
+	if languages == nil {
+		languages = []Language{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(languages)
 }

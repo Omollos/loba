@@ -18,6 +18,7 @@
   </div>
 </nav>
 
+<div class="page-wrap">
 <div class="card">
 
   <p class="sub" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;">About Loba</p>
@@ -26,17 +27,78 @@
   </h2>
 
   <p style="font-size: 14px; color: #6B6860; line-height: 1.8; margin-bottom: 1rem; font-weight: 300;">
-    Loba is a community-built, openly licensed corpus for the endangered and
-    underrepresented languages of East Africa. It starts with <strong style="color: #1A1A18;">Dholuo</strong>
-    — spoken by over 4 million people across Kenya and Tanzania — and is designed
-    to grow to Kikuyu, Kamba, Kalenjin, and beyond.
+    Dholuo language data exists — in fragments. Academic wordlists behind paywalls.
+    Bible translations repurposed for NLP experiments. Scattered repositories with
+    inconsistent licensing. Proverb collections in out-of-print books. None of it
+    structured consistently enough to build reliable digital tools on, and almost
+    none of it freely available for the developers and researchers who need it most.
+  </p>
+
+  <p style="font-size: 14px; color: #6B6860; line-height: 1.8; margin-bottom: 1rem; font-weight: 300;">
+    <strong style="color: #1A1A18;">Loba is the harmonising layer.</strong>
+    A single, openly licensed, community-verified corpus where existing Dholuo data
+    finds a proper home — and where every new contribution is structured from day one
+    to power the next generation of Dholuo NLP tools. Spell checkers. Translation
+    engines. AI assistants that actually speak the language.
+  </p>
+
+  <p style="font-size: 14px; color: #6B6860; line-height: 1.8; margin-bottom: 1rem; font-weight: 300;">
+    Loba is designed from the ground up to grow across languages. Every architectural
+    decision — from the database schema to the API — supports multiple languages without
+    restructuring anything. Adding a new language is one row in a database table.
+    The community, the review pipeline, and the open licensing follow automatically.
+  </p>
+
+  <hr style="border: none; border-top: 0.5px solid rgba(26,26,24,0.12); margin: 1.5rem 0;">
+
+  <p class="sub" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem;">What makes Loba different</p>
+
+  <div style="display: grid; gap: 14px; margin-bottom: 1.5rem;">
+    <div style="display: flex; gap: 14px; align-items: flex-start;">
+      <span style="font-size: 20px; flex-shrink: 0; width: 28px;">🔗</span>
+      <div>
+        <div style="font-size: 14px; font-weight: 500; margin-bottom: 3px;">Harmonised, not hoarded</div>
+        <div style="font-size: 13px; color: #6B6860; font-weight: 300; line-height: 1.6;">Existing Dholuo datasets, wordlists, and collections are welcomed into Loba with full attribution. We absorb and structure what already exists, not just what we create ourselves.</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 14px; align-items: flex-start;">
+      <span style="font-size: 20px; flex-shrink: 0; width: 28px;">✅</span>
+      <div>
+        <div style="font-size: 14px; font-weight: 500; margin-bottom: 3px;">Community verified</div>
+        <div style="font-size: 13px; color: #6B6860; font-weight: 300; line-height: 1.6;">Every entry is reviewed before joining the public corpus. A wrong translation poisons downstream AI models — quality control is not optional, it is the point.</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 14px; align-items: flex-start;">
+      <span style="font-size: 20px; flex-shrink: 0; width: 28px;">⚙️</span>
+      <div>
+        <div style="font-size: 14px; font-weight: 500; margin-bottom: 3px;">Structured for machines</div>
+        <div style="font-size: 13px; color: #6B6860; font-weight: 300; line-height: 1.6;">Every entry includes source text, translation, example sentence, cultural explanation, dialect region, and part of speech. Not a word list — a training-ready dataset.</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 14px; align-items: flex-start;">
+      <span style="font-size: 20px; flex-shrink: 0; width: 28px;">🔓</span>
+      <div>
+        <div style="font-size: 14px; font-weight: 500; margin-bottom: 3px;">Open by design, not by accident</div>
+        <div style="font-size: 13px; color: #6B6860; font-weight: 300; line-height: 1.6;">Code is MIT licensed. Data is CC BY 4.0. Every export format — JSONL for model training, CSV for research — is publicly accessible without an API key or a login.</div>
+      </div>
+    </div>
+  </div>
+
+  <hr style="border: none; border-top: 0.5px solid rgba(26,26,24,0.12); margin: 1.5rem 0;">
+
+  <p class="sub" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem;">The goal</p>
+
+  <p style="font-size: 14px; color: #6B6860; line-height: 1.8; margin-bottom: 1rem; font-weight: 300;">
+    A corpus large enough and clean enough to fine-tune a small language model on Dholuo.
+    A spell checker any Luo speaker can use in their browser. A translation API that
+    health workers, teachers, and government services can build on. Infrastructure as
+    solid as any major world language — built by the community it serves.
   </p>
 
   <p style="font-size: 14px; color: #6B6860; line-height: 1.8; margin-bottom: 1.5rem; font-weight: 300;">
-    Dholuo remains almost entirely absent from modern NLP tools, translation apps,
-    and AI assistants. Loba exists to change that — by building the foundational
-    dataset needed to create spell checkers, dictionaries, translation engines,
-    and AI tools that actually serve Luo speakers.
+    This is not a research project that ends with a paper. It is a living dataset
+    that grows with every contribution, every review, and every new language that
+    joins the platform.
   </p>
 
   <hr style="border: none; border-top: 0.5px solid rgba(26,26,24,0.12); margin: 1.5rem 0;">
@@ -48,43 +110,40 @@
       <span style="font-size: 1.2rem; font-weight: 700; color: #1D9E75; opacity: 0.4; flex-shrink: 0; width: 24px;">1</span>
       <div>
         <div style="font-size: 14px; font-weight: 500; margin-bottom: 3px;">Contributors submit entries</div>
-        <div style="font-size: 13px; color: #6B6860; font-weight: 300; line-height: 1.6;">Words, phrases, proverbs, and sentences — with translations, example sentences, and cultural context. No linguistics degree required.</div>
+        <div style="font-size: 13px; color: #6B6860; font-weight: 300; line-height: 1.6;">Words, phrases, proverbs, and sentences — with translations, example sentences, and cultural context. No linguistics degree required. If you speak, you qualify.</div>
       </div>
     </div>
     <div style="display: flex; gap: 14px; align-items: flex-start;">
       <span style="font-size: 1.2rem; font-weight: 700; color: #1D9E75; opacity: 0.4; flex-shrink: 0; width: 24px;">2</span>
       <div>
         <div style="font-size: 14px; font-weight: 500; margin-bottom: 3px;">Community review</div>
-        <div style="font-size: 13px; color: #6B6860; font-weight: 300; line-height: 1.6;">Every entry is verified before joining the public corpus. Quality over quantity — a wrong translation poisons downstream AI models.</div>
+        <div style="font-size: 13px; color: #6B6860; font-weight: 300; line-height: 1.6;">Every entry is verified by reviewers before joining the public corpus. Entries are typically reviewed within 24 hours.</div>
       </div>
     </div>
     <div style="display: flex; gap: 14px; align-items: flex-start;">
       <span style="font-size: 1.2rem; font-weight: 700; color: #1D9E75; opacity: 0.4; flex-shrink: 0; width: 24px;">3</span>
       <div>
         <div style="font-size: 14px; font-weight: 500; margin-bottom: 3px;">Open forever</div>
-        <div style="font-size: 13px; color: #6B6860; font-weight: 300; line-height: 1.6;">All data is released under CC BY 4.0 — free for researchers, educators, and developers to use, forever, as long as they credit the Loba corpus.</div>
+        <div style="font-size: 13px; color: #6B6860; font-weight: 300; line-height: 1.6;">Approved entries join the public corpus under CC BY 4.0 — downloadable as JSONL or CSV, queryable via API, free for anyone to build on.</div>
       </div>
     </div>
   </div>
 
   <hr style="border: none; border-top: 0.5px solid rgba(26,26,24,0.12); margin: 1.5rem 0;">
 
-  <p class="sub" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem;">Languages</p>
+  <p class="sub" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem;">Languages in the corpus</p>
 
-  <div id="lang-stats" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem;">
-    <div style="padding: 8px 16px; border-radius: 20px; background: #E1F5EE; color: #0F6E56; font-size: 13px; font-weight: 500;">
-      🟢 Dholuo — active
-    </div>
-    <div style="padding: 8px 16px; border-radius: 20px; background: #F5F0E8; color: #6B6860; font-size: 13px;">
-      Kikuyu — planned
-    </div>
-    <div style="padding: 8px 16px; border-radius: 20px; background: #F5F0E8; color: #6B6860; font-size: 13px;">
-      Kamba — planned
-    </div>
-    <div style="padding: 8px 16px; border-radius: 20px; background: #F5F0E8; color: #6B6860; font-size: 13px;">
-      Kalenjin — planned
-    </div>
+  <div id="languages" style="margin-bottom: 1.5rem;">
+    <div class="loading">Loading...</div>
   </div>
+
+  <p style="font-size: 13px; color: #6B6860; line-height: 1.8; font-weight: 300; margin-bottom: 1.5rem;">
+    Languages planned for future phases: Kikuyu, Kamba, Kalenjin, and others
+    across East Africa. Each new language follows the same open, community-verified
+    process — one INSERT into the languages table, zero architectural changes.
+    If you represent a language community and want to start a corpus,
+    <a href="https://github.com/Omollos/loba/discussions" style="color: #1D9E75;">open a discussion</a>.
+  </p>
 
   <hr style="border: none; border-top: 0.5px solid rgba(26,26,24,0.12); margin: 1.5rem 0;">
 
@@ -96,13 +155,26 @@
 
   <hr style="border: none; border-top: 0.5px solid rgba(26,26,24,0.12); margin: 1.5rem 0;">
 
+  <p class="sub" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem;">Ecosystem</p>
+
+  <p style="font-size: 13px; color: #6B6860; line-height: 1.8; font-weight: 300; margin-bottom: 1.5rem;">
+    Loba is built to exist alongside and connect with the broader African NLP ecosystem —
+    including <a href="https://www.masakhane.io" style="color: #1D9E75;">Masakhane</a>,
+    the pan-African NLP research initiative, and academic partners at universities across
+    East Africa. Researchers are welcome to use, cite, and contribute to the corpus.
+    Collaboration requests are open via
+    <a href="https://github.com/Omollos/loba/discussions" style="color: #1D9E75;">GitHub Discussions</a>.
+  </p>
+
+  <hr style="border: none; border-top: 0.5px solid rgba(26,26,24,0.12); margin: 1.5rem 0;">
+
   <p class="sub" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem;">Licences</p>
   <p style="font-size: 13px; color: #6B6860; line-height: 1.8; font-weight: 300;">
     <strong style="color: #1A1A18;">Code:</strong> MIT —
     <a href="https://github.com/Omollos/loba" style="color: #1D9E75;">github.com/Omollos/loba</a><br>
     <strong style="color: #1A1A18;">Data:</strong>
     <a href="https://creativecommons.org/licenses/by/4.0/" style="color: #1D9E75;">CC BY 4.0</a>
-    — free to use with attribution
+    — free to use with attribution. Cite as: <em>Loba Corpus, github.com/Omollos/loba</em>
   </p>
 
   <hr style="border: none; border-top: 0.5px solid rgba(26,26,24,0.12); margin: 1.5rem 0;">
@@ -111,16 +183,19 @@
   <p style="font-size: 13px; color: #6B6860; line-height: 1.8; font-weight: 300;">
     Loba was started in Kisumu, Kenya in 2025 by
     <a href="https://github.com/Omollos" style="color: #1D9E75;">Steve (Omollos)</a>
-    as an open source project. Questions, ideas, and collaboration requests are welcome
+    as an open source project rooted in the East African tech and language community.
+    Questions, ideas, dataset contributions, and collaboration requests are welcome
     via <a href="https://github.com/Omollos/loba/discussions" style="color: #1D9E75;">GitHub Discussions</a>.
   </p>
 
 </div>
 
 <script>
+const API = "http://localhost:8080/api/v1";
+
 async function loadStats() {
   try {
-    const response = await fetch('http://localhost:8080/api/v1/stats');
+    const response = await fetch(`${API}/stats`);
     if (!response.ok) throw new Error();
     const stats = await response.json();
 
@@ -144,8 +219,64 @@ async function loadStats() {
   }
 }
 
+async function loadLanguages() {
+  try {
+    const response = await fetch(`${API}/languages`);
+    if (!response.ok) throw new Error();
+    const languages = await response.json();
+
+    document.getElementById('languages').innerHTML = languages.map(lang => `
+      <div style="
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 16px;
+        border: 0.5px solid rgba(26,26,24,0.12);
+        border-radius: 10px;
+        margin-bottom: 8px;
+        background: white;
+      ">
+        <div>
+          <div style="font-size: 14px; font-weight: 500; margin-bottom: 3px;">
+            ${escapeHtml(lang.name)}
+            <span style="
+              font-size: 11px;
+              background: #E1F5EE;
+              color: #0F6E56;
+              padding: 2px 8px;
+              border-radius: 10px;
+              margin-left: 6px;
+              font-weight: 500;
+            ">active</span>
+          </div>
+          <div style="font-size: 12px; color: #6B6860;">
+            ${escapeHtml(lang.region)} · ${escapeHtml(lang.script)} script
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 18px; font-weight: 700; color: #1A1A18;">${lang.entry_count}</div>
+          <div style="font-size: 11px; color: #6B6860;">approved entries</div>
+        </div>
+      </div>
+    `).join('');
+
+  } catch {
+    document.getElementById('languages').innerHTML =
+      '<div style="font-size:13px;color:#6B6860;">Languages unavailable</div>';
+  }
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 loadStats();
+loadLanguages();
 </script>
+</div>
 
 </body>
 </html>
