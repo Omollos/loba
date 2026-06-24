@@ -43,7 +43,12 @@ async function loadQueue() {
           ${entry.dialect ? `<span class="badge">${escapeHtml(entry.dialect)}</span>` : ''}
         </div>
         ${entry.notes ? `<div class="entry-english" style="font-style: italic; margin-bottom: 10px;">${escapeHtml(entry.notes)}</div>` : ''}
-        <div class="entry-actions">
+        <div class="entry-actions" style="align-items: center; flex-wrap: wrap; gap: 8px;">
+          <select id="rating-${entry.id}" style="font-size: 12px; padding: 5px 10px; border-radius: 8px; border: 0.5px solid rgba(26,26,24,0.15);">
+            <option value="general">General</option>
+            <option value="mature">Mature</option>
+            <option value="restricted">Restricted</option>
+          </select>
           <button class="btn-approve" onclick="updateStatus('${entry.id}', 'approve')">Approve</button>
           <button class="btn-flag" onclick="updateStatus('${entry.id}', 'flag')">Flag</button>
         </div>
@@ -57,8 +62,13 @@ async function loadQueue() {
 
 async function updateStatus(id, action) {
   try {
+    const ratingEl = document.getElementById(`rating-${id}`);
+    const rating = ratingEl ? ratingEl.value : 'general';
+
     const response = await fetch(`${API_URL}/${id}/${action}`, {
-      method: 'PUT'
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating: rating })
     });
 
     if (!response.ok) throw new Error('Update failed');

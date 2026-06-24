@@ -118,6 +118,13 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 		status = "approved" // default to approved entries only
 	}
 
+	// Default to general only — mature content never appears publicly
+	// unless explicitly requested with a valid research key (Phase 3)
+	rating := r.URL.Query().Get("rating")
+	if rating == "" {
+		rating = "general"
+	}
+
 	// Build the query — filter by status always, category optionally
 	var rows interface {
 		Next() bool
@@ -131,30 +138,33 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 			context.Background(),
 			`SELECT e.id, e.language_id, e.source_text, e.english, e.part_of_speech,
 				e.explanation, e.english_equivalent, e.example_source, e.example_english,
-				e.notes, e.category, e.dialect, e.contributor_id, e.status, e.vote_score, e.created_at
+				e.notes, e.category, e.dialect, e.contributor_id, e.status, e.vote_score,
+				e.rating, e.created_at
 			FROM entries e
 			JOIN languages l ON l.id = e.language_id
 			WHERE e.status = $1
 			AND e.category = $2
 			AND ($3 = '' OR l.code = $3)
+			AND e.rating = $4
 			ORDER BY e.created_at DESC`,
-			status, category, lang,
+			status, category, lang, rating,
 		)
 	} else {
 		rows, err = db.DB.Query(
 			context.Background(),
 			`SELECT e.id, e.language_id, e.source_text, e.english, e.part_of_speech,
 				e.explanation, e.english_equivalent, e.example_source, e.example_english,
-				e.notes, e.category, e.dialect, e.contributor_id, e.status, e.vote_score, e.created_at
+				e.notes, e.category, e.dialect, e.contributor_id, e.status, e.vote_score,
+				e.rating, e.created_at
 			FROM entries e
 			JOIN languages l ON l.id = e.language_id
 			WHERE e.status = $1
 			AND ($2 = '' OR l.code = $2)
+			AND e.rating = $3
 			ORDER BY e.created_at DESC`,
-			status, lang,
+			status, lang, rating,
 		)
 	}
-
 	if err != nil {
 		http.Error(w, "could not fetch entries", http.StatusInternalServerError)
 		return
@@ -170,7 +180,7 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 			&e.PartOfSpeech, &e.Explanation, &e.EnglishEquivalent,
 			&e.ExampleSource, &e.ExampleEnglish, &e.Notes,
 			&e.Category, &e.Dialect, &e.ContributorID, &e.Status,
-			&e.VoteScore, &e.CreatedAt,
+			&e.VoteScore, &e.Rating, &e.CreatedAt,
 		)
 		if err != nil {
 			http.Error(w, "error reading entries", http.StatusInternalServerError)
@@ -204,31 +214,41 @@ func UpdateEntryStatus(newStatus string) http.HandlerFunc {
 			return
 		}
 
-		// Extract the {id} from the URL path pattern
 		id := r.PathValue("id")
 		if id == "" {
 			http.Error(w, "entry id is required", http.StatusBadRequest)
 			return
 		}
 
-		// Update the entry's status and set reviewed_at to now
+		// Reviewers can optionally set a rating when approving
+		// Body is optional — if empty, rating stays as is
+		var req struct {
+			Rating string `json:"rating"`
+		}
+		json.NewDecoder(r.Body).Decode(&req)
+
+		// Default to general if not specified
+		if req.Rating == "" {
+			req.Rating = "general"
+		}
+
 		var entry models.Entry
 		err := db.DB.QueryRow(
 			context.Background(),
 			`UPDATE entries
-			SET status = $1, reviewed_at = now()
-			WHERE id = $2
+			SET status = $1, rating = $2, reviewed_at = now()
+			WHERE id = $3
 			RETURNING id, language_id, source_text, english,
 				part_of_speech, explanation, english_equivalent,
 				example_source, example_english, notes, category,
-				dialect, status, vote_score, created_at, reviewed_at`,
-			newStatus, id,
+				dialect, status, vote_score, rating, created_at, reviewed_at`,
+			newStatus, req.Rating, id,
 		).Scan(
 			&entry.ID, &entry.LanguageID, &entry.SourceText, &entry.English,
 			&entry.PartOfSpeech, &entry.Explanation, &entry.EnglishEquivalent,
 			&entry.ExampleSource, &entry.ExampleEnglish, &entry.Notes,
 			&entry.Category, &entry.Dialect, &entry.Status,
-			&entry.VoteScore, &entry.CreatedAt, &entry.ReviewedAt,
+			&entry.VoteScore, &entry.Rating, &entry.CreatedAt, &entry.ReviewedAt,
 		)
 		if err != nil {
 			http.Error(w, "entry not found or update failed: "+err.Error(), http.StatusNotFound)
@@ -239,7 +259,6 @@ func UpdateEntryStatus(newStatus string) http.HandlerFunc {
 		json.NewEncoder(w).Encode(entry)
 	}
 }
-
 // CastVote handles POST /api/v1/entries/{id}/vote
 // Records a vote from a contributor and updates the entry's
 // running vote_score. One vote per contributor per entry —
@@ -510,8 +529,10 @@ func ExportJSONL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Optional language filter e.g. ?lang=luo
 	lang := r.URL.Query().Get("lang")
+	// Empty means all ratings — researchers get everything
+	// Pass ?rating=general for a family-safe export
+	exportRating := r.URL.Query().Get("rating")
 
 	var rows interface {
 		Next() bool
@@ -527,12 +548,14 @@ func ExportJSONL(w http.ResponseWriter, r *http.Request) {
 			`SELECT e.source_text, e.english, e.explanation,
 				e.english_equivalent, e.example_source,
 				e.example_english, e.category, e.dialect,
-				e.part_of_speech, e.notes, l.code, l.name
+				e.part_of_speech, e.notes, e.rating, l.code, l.name
 			FROM entries e
 			JOIN languages l ON l.id = e.language_id
-			WHERE e.status = 'approved' AND l.code = $1
+			WHERE e.status = 'approved'
+			AND l.code = $1
+			AND ($2 = '' OR e.rating = $2)
 			ORDER BY e.created_at ASC`,
-			lang,
+			lang, exportRating,
 		)
 	} else {
 		rows, err = db.DB.Query(
@@ -540,11 +563,13 @@ func ExportJSONL(w http.ResponseWriter, r *http.Request) {
 			`SELECT e.source_text, e.english, e.explanation,
 				e.english_equivalent, e.example_source,
 				e.example_english, e.category, e.dialect,
-				e.part_of_speech, e.notes, l.code, l.name
+				e.part_of_speech, e.notes, e.rating, l.code, l.name
 			FROM entries e
 			JOIN languages l ON l.id = e.language_id
 			WHERE e.status = 'approved'
+			AND ($1 = '' OR e.rating = $1)
 			ORDER BY e.created_at ASC`,
+			exportRating,
 		)
 	}
 
@@ -554,9 +579,6 @@ func ExportJSONL(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	// JSONL — one JSON object per line, no wrapping array
-	// Each line is independently parseable — important for
-	// streaming large datasets into training pipelines
 	w.Header().Set("Content-Type", "application/x-ndjson")
 	w.Header().Set("Content-Disposition", "attachment; filename=loba-corpus.jsonl")
 
@@ -573,6 +595,7 @@ func ExportJSONL(w http.ResponseWriter, r *http.Request) {
 			Dialect           string `json:"dialect,omitempty"`
 			PartOfSpeech      string `json:"part_of_speech,omitempty"`
 			Notes             string `json:"notes,omitempty"`
+			Rating            string `json:"rating"`
 			LanguageCode      string `json:"language_code"`
 			LanguageName      string `json:"language_name"`
 		}
@@ -580,7 +603,7 @@ func ExportJSONL(w http.ResponseWriter, r *http.Request) {
 			&rec.SourceText, &rec.English, &rec.Explanation,
 			&rec.EnglishEquivalent, &rec.ExampleSource,
 			&rec.ExampleEnglish, &rec.Category, &rec.Dialect,
-			&rec.PartOfSpeech, &rec.Notes,
+			&rec.PartOfSpeech, &rec.Notes, &rec.Rating,
 			&rec.LanguageCode, &rec.LanguageName,
 		)
 		if err != nil {
@@ -600,6 +623,7 @@ func ExportCSV(w http.ResponseWriter, r *http.Request) {
 	}
 
 	lang := r.URL.Query().Get("lang")
+	exportRating := r.URL.Query().Get("rating")
 
 	var rows interface {
 		Next() bool
@@ -615,12 +639,14 @@ func ExportCSV(w http.ResponseWriter, r *http.Request) {
 			`SELECT e.source_text, e.english, e.explanation,
 				e.english_equivalent, e.example_source,
 				e.example_english, e.category, e.dialect,
-				e.part_of_speech, e.notes, l.code, l.name
+				e.part_of_speech, e.notes, e.rating, l.code, l.name
 			FROM entries e
 			JOIN languages l ON l.id = e.language_id
-			WHERE e.status = 'approved' AND l.code = $1
+			WHERE e.status = 'approved'
+			AND l.code = $1
+			AND ($2 = '' OR e.rating = $2)
 			ORDER BY e.created_at ASC`,
-			lang,
+			lang, exportRating,
 		)
 	} else {
 		rows, err = db.DB.Query(
@@ -628,11 +654,13 @@ func ExportCSV(w http.ResponseWriter, r *http.Request) {
 			`SELECT e.source_text, e.english, e.explanation,
 				e.english_equivalent, e.example_source,
 				e.example_english, e.category, e.dialect,
-				e.part_of_speech, e.notes, l.code, l.name
+				e.part_of_speech, e.notes, e.rating, l.code, l.name
 			FROM entries e
 			JOIN languages l ON l.id = e.language_id
 			WHERE e.status = 'approved'
+			AND ($1 = '' OR e.rating = $1)
 			ORDER BY e.created_at ASC`,
+			exportRating,
 		)
 	}
 
@@ -645,32 +673,34 @@ func ExportCSV(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/csv")
 	w.Header().Set("Content-Disposition", "attachment; filename=loba-corpus.csv")
 
-	// Write header row
-	w.Write([]byte("source_text,english,explanation,english_equivalent,example_source,example_english,category,dialect,part_of_speech,notes,language_code,language_name\n"))
+	// Header row includes rating so researchers know what they have
+	w.Write([]byte("source_text,english,explanation,english_equivalent," +
+		"example_source,example_english,category,dialect," +
+		"part_of_speech,notes,rating,language_code,language_name\n"))
 
 	for rows.Next() {
 		var sourceText, english, explanation, englishEquivalent string
 		var exampleSource, exampleEnglish, category, dialect string
-		var partOfSpeech, notes, langCode, langName string
+		var partOfSpeech, notes, rating, langCode, langName string
 
 		err := rows.Scan(
 			&sourceText, &english, &explanation,
 			&englishEquivalent, &exampleSource,
 			&exampleEnglish, &category, &dialect,
-			&partOfSpeech, &notes, &langCode, &langName,
+			&partOfSpeech, &notes, &rating,
+			&langCode, &langName,
 		)
 		if err != nil {
 			continue
 		}
 
-		// Escape any commas or quotes within fields
-		row := fmt.Sprintf("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+		row := fmt.Sprintf("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
 			csvEscape(sourceText), csvEscape(english),
 			csvEscape(explanation), csvEscape(englishEquivalent),
 			csvEscape(exampleSource), csvEscape(exampleEnglish),
 			csvEscape(category), csvEscape(dialect),
 			csvEscape(partOfSpeech), csvEscape(notes),
-			csvEscape(langCode), csvEscape(langName),
+			csvEscape(rating), csvEscape(langCode), csvEscape(langName),
 		)
 		w.Write([]byte(row))
 	}
