@@ -109,12 +109,42 @@ function renderEntries() {
         ${entry.dialect ? `<span class="badge">${escapeHtml(entry.dialect)}</span>` : ''}
         ${entry.vote_score > 0 ? `<span class="badge">${entry.vote_score} verifications</span>` : ''}
       </div>
-      <div id="detail-${entry.id}" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 0.5px solid rgba(26,26,24,0.1); font-size: 13px; color: #6B6860;">
-        ${entry.example_source ? `<div style="font-style: italic; color: #1A1A18; margin-bottom: 2px;">${escapeHtml(entry.example_source)}</div>` : ''}
-        ${entry.example_english ? `<div style="margin-bottom: 8px;">${escapeHtml(entry.example_english)}</div>` : ''}
-        ${entry.explanation ? `<div style="margin-bottom: 6px;"><strong>Meaning:</strong> ${escapeHtml(entry.explanation)}</div>` : ''}
-        ${entry.english_equivalent ? `<div style="margin-bottom: 6px;"><strong>English equivalent:</strong> ${escapeHtml(entry.english_equivalent)}</div>` : ''}
-        ${entry.notes ? `<div>${escapeHtml(entry.notes)}</div>` : ''}
+      <div id="detail-${entry.id}" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 0.5px solid rgba(26,26,24,0.1);">
+
+        ${entry.definition_source ? `
+          <div style="background: #E1F5EE; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: #0F6E56; font-weight: 500; margin-bottom: 5px;">Tiend wach e Dholuo</div>
+            <div style="font-size: 15px; color: #1A1A18; line-height: 1.6;">${escapeHtml(entry.definition_source)}</div>
+            ${entry.definition_english ? `<div style="font-size: 13px; color: #6B6860; margin-top: 5px; font-style: italic;">${escapeHtml(entry.definition_english)}</div>` : ''}
+          </div>
+        ` : ''}
+
+        ${entry.example_source ? `
+          <div style="margin-bottom: 8px;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: #6B6860; font-weight: 500; margin-bottom: 4px;">Example</div>
+            <div style="font-style: italic; color: #1A1A18; font-size: 14px; margin-bottom: 2px;">${escapeHtml(entry.example_source)}</div>
+            ${entry.example_english ? `<div style="font-size: 13px; color: #6B6860;">${escapeHtml(entry.example_english)}</div>` : ''}
+          </div>
+        ` : ''}
+
+        ${entry.explanation ? `
+          <div style="margin-bottom: 6px; font-size: 13px; color: #6B6860;">
+            <strong style="color: #1A1A18;">Meaning:</strong> ${escapeHtml(entry.explanation)}
+          </div>
+        ` : ''}
+
+        ${entry.english_equivalent ? `
+          <div style="margin-bottom: 6px; font-size: 13px; color: #6B6860;">
+            <strong style="color: #1A1A18;">English equivalent:</strong> ${escapeHtml(entry.english_equivalent)}
+          </div>
+        ` : ''}
+
+        ${entry.notes ? `
+          <div style="font-size: 13px; color: #6B6860; border-top: 0.5px solid rgba(26,26,24,0.08); padding-top: 8px; margin-top: 8px;">
+            ${escapeHtml(entry.notes)}
+          </div>
+        ` : ''}
+
       </div>
     </div>
   `).join('');

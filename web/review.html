@@ -85,6 +85,19 @@ async function loadQueue(status) {
         ` : ''}
 
         ${status === 'pending' ? `
+        <div style="margin-bottom: 10px; padding: 10px 14px; background: #F5F0E8; border-radius: 8px;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: #6B6860; font-weight: 500; margin-bottom: 6px;">Tiend wach e Dholuo (reviewer can add/edit before approving)</div>
+            <textarea
+              id="def-source-${entry.id}"
+              style="width:100%;font-size:14px;padding:8px 10px;border:0.5px solid rgba(26,26,24,0.15);border-radius:8px;font-family:inherit;resize:vertical;min-height:60px;margin-bottom:6px;"
+              placeholder="Explain what this word means in Dholuo..."
+            >${entry.definition_source ? escapeHtml(entry.definition_source) : ''}</textarea>
+            <textarea
+              id="def-english-${entry.id}"
+              style="width:100%;font-size:14px;padding:8px 10px;border:0.5px solid rgba(26,26,24,0.15);border-radius:8px;font-family:inherit;resize:vertical;min-height:60px;"
+              placeholder="English translation of the Dholuo definition..."
+            >${entry.definition_english ? escapeHtml(entry.definition_english) : ''}</textarea>
+          </div>
           <div style="margin-bottom: 8px;">
             <select id="rating-${entry.id}" style="font-size: 12px; padding: 5px 10px; border-radius: 8px; border: 0.5px solid rgba(26,26,24,0.15); margin-bottom: 6px;">
               <option value="general">General — safe for all audiences</option>
@@ -142,7 +155,9 @@ function cancelFlag(id) {
 async function approveEntry(id) {
   const ratingEl = document.getElementById(`rating-${id}`);
   const rating = ratingEl ? ratingEl.value : 'general';
-  await updateStatus(id, 'approve', rating, '');
+  const defSource = document.getElementById(`def-source-${id}`)?.value || '';
+  const defEnglish = document.getElementById(`def-english-${id}`)?.value || '';
+  await updateStatus(id, 'approve', rating, '', defSource, defEnglish);
 }
 
 async function confirmFlag(id) {
@@ -170,22 +185,25 @@ async function deleteEntry(id) {
   }
 }
 
-async function updateStatus(id, action, rating, flagReason) {
+async function updateStatus(id, action, rating, flagReason, defSource, defEnglish) {
   try {
     const response = await fetch(`${API_URL}/${id}/${action}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rating, flag_reason: flagReason })
+      body: JSON.stringify({
+        rating,
+        flag_reason: flagReason,
+        definition_source: defSource || '',
+        definition_english: defEnglish || ''
+      })
     });
     if (!response.ok) throw new Error('Update failed');
     removeRow(id);
-    // Refresh counts
     loadCounts();
   } catch (err) {
     alert('Could not update entry: ' + err.message);
   }
 }
-
 function removeRow(id) {
   const row = document.getElementById(`row-${id}`);
   if (row) {

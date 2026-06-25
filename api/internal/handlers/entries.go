@@ -231,8 +231,10 @@ func UpdateEntryStatus(newStatus string) http.HandlerFunc {
 		// Reviewers can optionally set a rating when approving
 		// Body is optional — if empty, rating stays as is
 		var req struct {
-			Rating     string `json:"rating"`
-			FlagReason string `json:"flag_reason"`
+			Rating            string `json:"rating"`
+			FlagReason        string `json:"flag_reason"`
+			DefinitionSource  string `json:"definition_source"`
+			DefinitionEnglish string `json:"definition_english"`
 		}
 		json.NewDecoder(r.Body).Decode(&req)
 
@@ -246,17 +248,29 @@ func UpdateEntryStatus(newStatus string) http.HandlerFunc {
 		}
 
 		var entry models.Entry
+		var defSource *string
+		if req.DefinitionSource != "" {
+			defSource = &req.DefinitionSource
+		}
+		var defEnglish *string
+		if req.DefinitionEnglish != "" {
+			defEnglish = &req.DefinitionEnglish
+		}
+
 		err := db.DB.QueryRow(
 			context.Background(),
 			`UPDATE entries
-			SET status = $1, rating = $2, flag_reason = $3, reviewed_at = now()
+			SET status = $1, rating = $2, flag_reason = $3,
+				definition_source = COALESCE($5, definition_source),
+				definition_english = COALESCE($6, definition_english),
+				reviewed_at = now()
 			WHERE id = $4
 			RETURNING id, language_id, source_text, english,
 				part_of_speech, explanation, english_equivalent,
 				example_source, example_english, notes, category,
 				dialect, status, vote_score, rating, flag_reason,
 				created_at, reviewed_at`,
-			newStatus, req.Rating, flagReason, id,
+			newStatus, req.Rating, flagReason, id, defSource, defEnglish,
 		).Scan(
 			&entry.ID, &entry.LanguageID, &entry.SourceText, &entry.English,
 			&entry.PartOfSpeech, &entry.Explanation, &entry.EnglishEquivalent,
