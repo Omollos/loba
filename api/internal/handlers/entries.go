@@ -66,28 +66,33 @@ func CreateEntry(w http.ResponseWriter, r *http.Request) {
 		context.Background(),
 		`INSERT INTO entries (
 			language_id, source_text, english, part_of_speech,
+			definition_source, definition_english,
 			explanation, english_equivalent, example_source,
 			example_english, notes, category, dialect,
 			contributor_id, source, source_url
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+			$1, $2, $3, $4, $5, $6, $7, $8, $9,
+			$10, $11, $12, $13, $14, $15, $16
 		)
 		RETURNING id, language_id, source_text, english,
-			part_of_speech, explanation, english_equivalent,
-			example_source, example_english, notes, category,
-			dialect, contributor_id, source, source_url,
-			status, vote_score, created_at`,
+			part_of_speech, definition_source, definition_english,
+			explanation, english_equivalent, example_source,
+			example_english, notes, category, dialect,
+			contributor_id, source, source_url,
+			status, vote_score, rating, created_at`,
 		req.LanguageID, req.SourceText, req.English, req.PartOfSpeech,
+		req.DefinitionSource, req.DefinitionEnglish,
 		req.Explanation, req.EnglishEquivalent, req.ExampleSource,
 		req.ExampleEnglish, req.Notes, req.Category, req.Dialect,
 		contributorID, req.Source, req.SourceURL,
 	).Scan(
 		&entry.ID, &entry.LanguageID, &entry.SourceText, &entry.English,
-		&entry.PartOfSpeech, &entry.Explanation, &entry.EnglishEquivalent,
+		&entry.PartOfSpeech, &entry.DefinitionSource, &entry.DefinitionEnglish,
+		&entry.Explanation, &entry.EnglishEquivalent,
 		&entry.ExampleSource, &entry.ExampleEnglish, &entry.Notes,
 		&entry.Category, &entry.Dialect, &entry.ContributorID,
 		&entry.Source, &entry.SourceURL,
-		&entry.Status, &entry.VoteScore, &entry.CreatedAt,
+		&entry.Status, &entry.VoteScore, &entry.Rating, &entry.CreatedAt,
 	)
 	if err != nil {
 		http.Error(w, "could not create entry: "+err.Error(), http.StatusInternalServerError)
@@ -136,10 +141,11 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 	if category != "" {
 		rows, err = db.DB.Query(
 			context.Background(),
-			`SELECT e.id, e.language_id, e.source_text, e.english, e.part_of_speech,
-				e.explanation, e.english_equivalent, e.example_source, e.example_english,
-				e.notes, e.category, e.dialect, e.contributor_id, e.status, e.vote_score,
-				e.rating, e.created_at
+			`SELECT e.id, e.language_id, e.source_text, e.english,
+				e.part_of_speech, e.definition_source, e.definition_english,
+				e.explanation, e.english_equivalent, e.example_source,
+				e.example_english, e.notes, e.category, e.dialect,
+				e.contributor_id, e.status, e.vote_score, e.rating, e.created_at
 			FROM entries e
 			JOIN languages l ON l.id = e.language_id
 			WHERE e.status = $1
@@ -152,10 +158,11 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 	} else {
 		rows, err = db.DB.Query(
 			context.Background(),
-			`SELECT e.id, e.language_id, e.source_text, e.english, e.part_of_speech,
-				e.explanation, e.english_equivalent, e.example_source, e.example_english,
-				e.notes, e.category, e.dialect, e.contributor_id, e.status, e.vote_score,
-				e.rating, e.created_at
+			`SELECT e.id, e.language_id, e.source_text, e.english,
+				e.part_of_speech, e.definition_source, e.definition_english,
+				e.explanation, e.english_equivalent, e.example_source,
+				e.example_english, e.notes, e.category, e.dialect,
+				e.contributor_id, e.status, e.vote_score, e.rating, e.created_at
 			FROM entries e
 			JOIN languages l ON l.id = e.language_id
 			WHERE e.status = $1
@@ -177,10 +184,11 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 		var reviewedAt *time.Time
 		err := rows.Scan(
 			&e.ID, &e.LanguageID, &e.SourceText, &e.English,
-			&e.PartOfSpeech, &e.Explanation, &e.EnglishEquivalent,
+			&e.PartOfSpeech, &e.DefinitionSource, &e.DefinitionEnglish,
+			&e.Explanation, &e.EnglishEquivalent,
 			&e.ExampleSource, &e.ExampleEnglish, &e.Notes,
-			&e.Category, &e.Dialect, &e.ContributorID, &e.Status,
-			&e.VoteScore, &e.Rating, &e.CreatedAt,
+			&e.Category, &e.Dialect, &e.ContributorID,
+			&e.Status, &e.VoteScore, &e.Rating, &e.CreatedAt,
 		)
 		if err != nil {
 			http.Error(w, "error reading entries", http.StatusInternalServerError)

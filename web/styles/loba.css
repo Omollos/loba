@@ -65,22 +65,21 @@ body {
 }
 
 h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-.sub { font-size: 13px; color: #6B6860; margin-bottom: 1.5rem; }
-
+.sub { font-size: 14px; color: #6B6860; margin-bottom: 1.5rem; }
 label {
   display: block;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  margin-bottom: 5px;
-  margin-top: 14px;
+  margin-bottom: 6px;
+  margin-top: 16px;
 }
 
 input, textarea, select {
   width: 100%;
-  padding: 9px 12px;
+  padding: 10px 13px;
   border: 0.5px solid rgba(26,26,24,0.12);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   font-family: inherit;
 }
 
@@ -121,9 +120,8 @@ button:hover { opacity: 0.85; }
   margin-bottom: 10px;
 }
 
-.entry-source { font-size: 17px; font-weight: 600; margin-bottom: 3px; }
-.entry-english { font-size: 14px; color: #6B6860; margin-bottom: 8px; }
-
+.entry-source { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+.entry-english { font-size: 15px; color: #6B6860; margin-bottom: 8px; }
 .entry-meta {
   display: flex;
   gap: 8px;
@@ -220,3 +218,107 @@ button:hover { opacity: 0.85; }
 }
 
 .nav-contribute:hover { opacity: 0.9; }
+
+/* ── Review queue ── */
+.queue-tab {
+  font-size: 13px;
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 0.5px solid rgba(26,26,24,0.15);
+  background: none;
+  cursor: pointer;
+  color: #6B6860;
+  font-family: inherit;
+}
+
+.queue-tab.active {
+  background: #1A1A18;
+  color: #F5F0E8;
+  border-color: #1A1A18;
+}
+
+.flag-reason-input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 0.5px solid rgba(26,26,24,0.15);
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  margin-bottom: 8px;
+  resize: none;
+  min-height: 52px;
+}
+
+.flag-reason-display {
+  font-size: 12px;
+  color: #993C1D;
+  background: #FAECE7;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  font-style: italic;
+}
+
+.btn-reopen {
+  background: #E6F1FB;
+  color: #185FA5;
+  border: 0.5px solid #B5D4F4;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-delete {
+  background: #FCEBEB;
+  color: #A32D2D;
+  border: 0.5px solid #F7C1C1;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ── Form grid layout ── */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 1rem;
+}
+
+.form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dholuo-input {
+  font-size: 15px;
+}
+
+.dialect-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 0.5px solid rgba(26,26,24,0.12);
+  border-radius: 8px;
+}
+
+.dialect-check-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 400;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Mobile — stack form columns */
+@media (max-width: 600px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}

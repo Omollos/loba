@@ -37,62 +37,6 @@
 </div>
 </div>
 
-<style>
-.queue-tab {
-  font-size: 13px;
-  padding: 7px 16px;
-  border-radius: 20px;
-  border: 0.5px solid rgba(26,26,24,0.15);
-  background: none;
-  cursor: pointer;
-  color: #6B6860;
-  font-family: inherit;
-}
-.queue-tab.active {
-  background: #1A1A18;
-  color: #F5F0E8;
-  border-color: #1A1A18;
-}
-.flag-reason-input {
-  width: 100%;
-  padding: 7px 10px;
-  border: 0.5px solid rgba(26,26,24,0.15);
-  border-radius: 8px;
-  font-size: 12px;
-  font-family: inherit;
-  margin-bottom: 8px;
-  resize: none;
-  min-height: 52px;
-}
-.flag-reason-display {
-  font-size: 12px;
-  color: #993C1D;
-  background: #FAECE7;
-  border-radius: 8px;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  font-style: italic;
-}
-.btn-reopen {
-  background: #E6F1FB;
-  color: #185FA5;
-  border: 0.5px solid #B5D4F4;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  cursor: pointer;
-}
-.btn-delete {
-  background: #FCEBEB;
-  color: #A32D2D;
-  border: 0.5px solid #F7C1C1;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  cursor: pointer;
-}
-</style>
-
 <script>
 const API_URL = "http://localhost:8080/api/v1/entries";
 let currentTab = 'pending';

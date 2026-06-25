@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Loba — Add a Dholuo entry</title>
+<title>Loba — Contribute</title>
 <link rel="stylesheet" href="styles/loba.css">
 </head>
 <body>
@@ -19,71 +19,122 @@
 </nav>
 
 <div class="page-wrap">
-<div class="card">
-  <p class="sub">Add a Dholuo entry to the corpus.</p>
+<div class="card wide-card">
 
-  <label>Your username *</label>
-  <input type="text" id="username" placeholder="e.g. stevomondi">
-
-  <label>Dholuo text *</label>
-  <input type="text" id="source_text" placeholder="e.g. Chuny">
-
-  <label>English translation *</label>
-  <input type="text" id="english" placeholder="e.g. Heart, soul, spirit">
-
-  <label>Category</label>
-  <select id="category">
-    <option value="">Select category</option>
-    <option>Greetings</option>
-    <option>Family</option>
-    <option>Food & drink</option>
-    <option>Proverbs</option>
-    <option>Daily life</option>
-    <option>Emotions</option>
-    <option>Body & health</option>
-    <option>Nature</option>
-    <option>Numbers</option>
-    <option>Spirituality</option>
-    <option>Music & culture</option>
-    <option>Clothing</option>
-    <option>Farming & livestock</option>
-    <option>Time & seasons</option>
-    <option value="__custom__">Other (type below)</option>
-  </select>
-  <input type="text" id="custom-category" placeholder="Type your category" style="display:none; margin-top: 6px;">
-
-  <label>Dialect region(s)</label>
-  <div style="display: flex; flex-wrap: wrap; gap: 12px; padding: 9px 12px; border: 0.5px solid rgba(26,26,24,0.12); border-radius: 8px; margin-bottom: 4px;">
-    <label style="display: flex; align-items: center; gap: 5px; font-weight: 400; margin: 0;">
-      <input type="checkbox" value="Kisumu" class="dialect-check"> Kisumu
-    </label>
-    <label style="display: flex; align-items: center; gap: 5px; font-weight: 400; margin: 0;">
-      <input type="checkbox" value="Siaya" class="dialect-check"> Siaya
-    </label>
-    <label style="display: flex; align-items: center; gap: 5px; font-weight: 400; margin: 0;">
-      <input type="checkbox" value="Homa Bay" class="dialect-check"> Homa Bay
-    </label>
-    <label style="display: flex; align-items: center; gap: 5px; font-weight: 400; margin: 0;">
-      <input type="checkbox" value="Migori" class="dialect-check"> Migori
-    </label>
-    <label style="display: flex; align-items: center; gap: 5px; font-weight: 400; margin: 0;">
-      <input type="checkbox" value="Tanzania Luo" class="dialect-check"> Tanzania Luo
-    </label>
-  </div>
-  <div style="font-size: 11px; color: #6B6860; margin-bottom: 4px;">Select all that apply, or leave blank if unsure</div>
-
-  <label>Example sentence (Dholuo)</label>
-  <textarea id="example_source" placeholder="A sentence using this word..."></textarea>
-
-  <label>Example sentence (English)</label>
-  <textarea id="example_english" placeholder="The translation of that sentence..."></textarea>
-
-  <label>Notes</label>
-  <textarea id="notes" placeholder="Pronunciation, tone, usage..."></textarea>
-
-  <button onclick="submitEntry()">Submit entry</button>
+  <p class="sub" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">Add an entry</p>
+  <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.25rem; letter-spacing: -0.02em;">Contribute to the Dholuo corpus</h2>
+  <p style="font-size: 13px; color: #6B6860; margin-bottom: 1.5rem; font-weight: 300;">Every word, phrase, and proverb you add helps build the first structured open Dholuo dataset.</p>
 
   <div id="result"></div>
+
+  <!-- Row 1: word + english -->
+  <div class="form-row">
+    <div class="form-col">
+      <label>Dholuo text <span style="color:#D85A30">*</span></label>
+      <input type="text" id="source_text" placeholder="e.g. Chuny" class="dholuo-input">
+    </div>
+    <div class="form-col">
+      <label>English translation <span style="color:#D85A30">*</span></label>
+      <input type="text" id="english" placeholder="e.g. Heart, soul, spirit">
+    </div>
+  </div>
+
+  <!-- Row 2: dholuo definition + english definition -->
+  <div class="form-row">
+    <div class="form-col">
+      <label>Meaning in Dholuo <span style="font-size:11px;color:#6B6860;font-weight:300;">(optional)</span></label>
+      <textarea id="definition_source" class="dholuo-input" placeholder="Explain what this word means in Dholuo, as you would to a younger person..."></textarea>
+      <div style="font-size:11px;color:#6B6860;margin-top:3px;">Leave blank if unsure — a reviewer can add this later</div>
+    </div>
+    <div class="form-col">
+      <label>English translation of that meaning <span style="font-size:11px;color:#6B6860;font-weight:300;">(optional)</span></label>
+      <textarea id="definition_english" placeholder="English translation of the Dholuo definition above..."></textarea>
+    </div>
+  </div>
+
+  <!-- Row 3: example sentence -->
+  <div class="form-row">
+    <div class="form-col">
+      <label>Example sentence <span style="font-size:11px;color:#6B6860;font-weight:300;">(Dholuo)</span></label>
+      <textarea id="example_source" class="dholuo-input" placeholder="A sentence using this word in context..."></textarea>
+    </div>
+    <div class="form-col">
+      <label>Example sentence <span style="font-size:11px;color:#6B6860;font-weight:300;">(English)</span></label>
+      <textarea id="example_english" placeholder="English translation of the example sentence..."></textarea>
+    </div>
+  </div>
+
+  <!-- Row 4: proverb fields -->
+  <div class="form-row">
+    <div class="form-col">
+      <label>Deeper meaning / cultural context <span style="font-size:11px;color:#6B6860;font-weight:300;">(optional)</span></label>
+      <textarea id="explanation" placeholder="What does this really mean? When is it used?"></textarea>
+    </div>
+    <div class="form-col">
+      <label>English equivalent <span style="font-size:11px;color:#6B6860;font-weight:300;">(optional)</span></label>
+      <input type="text" id="english_equivalent" placeholder="e.g. Every cloud has a silver lining">
+    </div>
+  </div>
+
+  <!-- Row 5: category + dialect -->
+  <div class="form-row">
+    <div class="form-col">
+      <label>Category</label>
+      <select id="category">
+        <option value="">Select category</option>
+        <option>Greetings</option>
+        <option>Family</option>
+        <option>Food & drink</option>
+        <option>Proverbs</option>
+        <option>Daily life</option>
+        <option>Emotions</option>
+        <option>Body & health</option>
+        <option>Nature</option>
+        <option>Numbers</option>
+        <option>Spirituality</option>
+        <option>Music & culture</option>
+        <option>Clothing</option>
+        <option>Farming & livestock</option>
+        <option>Time & seasons</option>
+        <option value="__custom__">Other (type below)</option>
+      </select>
+      <input type="text" id="custom-category" placeholder="Type your category" style="display:none; margin-top: 6px;">
+    </div>
+    <div class="form-col">
+      <label>Dialect region(s)</label>
+      <div class="dialect-box">
+        <label class="dialect-check-label"><input type="checkbox" value="Kisumu" class="dialect-check"> Kisumu</label>
+        <label class="dialect-check-label"><input type="checkbox" value="Siaya" class="dialect-check"> Siaya</label>
+        <label class="dialect-check-label"><input type="checkbox" value="Homa Bay" class="dialect-check"> Homa Bay</label>
+        <label class="dialect-check-label"><input type="checkbox" value="Migori" class="dialect-check"> Migori</label>
+        <label class="dialect-check-label"><input type="checkbox" value="Tanzania Luo" class="dialect-check"> Tanzania Luo</label>
+      </div>
+      <div style="font-size: 11px; color: #6B6860; margin-top: 4px;">Select all that apply</div>
+    </div>
+  </div>
+
+  <!-- Row 6: notes full width -->
+  <div style="margin-bottom: 1rem;">
+    <label>Notes <span style="font-size:11px;color:#6B6860;font-weight:300;">(pronunciation, tone, register, usage)</span></label>
+    <textarea id="notes" placeholder="e.g. The 'ch' is palatal. Used only between elders. Common in formal speech..." style="min-height: 60px;"></textarea>
+  </div>
+
+  <!-- Row 7: contributor -->
+  <div class="form-row">
+    <div class="form-col">
+      <label>Your username <span style="color:#D85A30">*</span></label>
+      <input type="text" id="username" placeholder="e.g. stevomollo">
+    </div>
+    <div class="form-col">
+      <label>Email <span style="font-size:11px;color:#6B6860;font-weight:300;">(optional — for contributor credit)</span></label>
+      <input type="text" id="email" placeholder="your@email.com">
+    </div>
+  </div>
+
+  <button onclick="submitEntry()" style="margin-top: 0.5rem;">Submit entry</button>
+  <span style="font-size: 11px; color: #6B6860; margin-left: 12px;">By submitting you release this entry under CC BY 4.0</span>
+
+</div>
 </div>
 
 <script>
@@ -106,29 +157,35 @@ async function submitEntry() {
   }
 
   try {
-    // Step 1 — get or create the contributor, get their ID back
     const contributorResponse = await fetch(CONTRIBUTORS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: username })
+      body: JSON.stringify({ username })
     });
-
     if (!contributorResponse.ok) throw new Error('Could not identify contributor');
     const contributor = await contributorResponse.json();
 
-    // Step 2 — submit the entry, now including the contributor_id
+    const categoryEl = document.getElementById('category');
+    const category = categoryEl.value === '__custom__'
+      ? document.getElementById('custom-category').value
+      : categoryEl.value;
+
+    const dialect = Array.from(document.querySelectorAll('.dialect-check:checked'))
+      .map(cb => cb.value)
+      .join(', ');
+
     const payload = {
       source_text: sourceText,
-      english: english,
-      category: document.getElementById('category').value === '__custom__'
-        ? document.getElementById('custom-category').value
-        : document.getElementById('category').value,
-      dialect: Array.from(document.querySelectorAll('.dialect-check:checked'))
-        .map(cb => cb.value)
-        .join(', '),
+      english,
+      definition_source: document.getElementById('definition_source').value,
+      definition_english: document.getElementById('definition_english').value,
       example_source: document.getElementById('example_source').value,
       example_english: document.getElementById('example_english').value,
+      explanation: document.getElementById('explanation').value,
+      english_equivalent: document.getElementById('english_equivalent').value,
       notes: document.getElementById('notes').value,
+      category,
+      dialect,
       contributor_id: contributor.id
     };
 
@@ -156,18 +213,20 @@ function showResult(type, message) {
   const el = document.getElementById('result');
   el.className = type;
   el.textContent = message;
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function clearForm() {
-  document.getElementById('source_text').value = '';
-  document.getElementById('english').value = '';
-  document.getElementById('example_source').value = '';
-  document.getElementById('example_english').value = '';
-  document.getElementById('notes').value = '';
+  ['source_text','english','definition_source','definition_english',
+   'example_source','example_english','explanation',
+   'english_equivalent','notes'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('category').value = '';
+  document.getElementById('custom-category').style.display = 'none';
   document.querySelectorAll('.dialect-check').forEach(cb => cb.checked = false);
 }
 </script>
-</div>
 
 </body>
 </html>
