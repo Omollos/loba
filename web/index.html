@@ -156,6 +156,13 @@ async function submitEntry() {
     return;
   }
 
+  // Disable button immediately to prevent double submission
+  const btn = document.querySelector('button[onclick="submitEntry()"]');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+  btn.style.opacity = '0.5';
+  btn.style.cursor = 'not-allowed';
+
   try {
     const contributorResponse = await fetch(CONTRIBUTORS_URL, {
       method: 'POST',
@@ -206,6 +213,13 @@ async function submitEntry() {
 
   } catch (err) {
     showResult('error', 'Something went wrong: ' + err.message);
+
+  } finally {
+    // Always re-enable the button whether success or error
+    btn.disabled = false;
+    btn.textContent = 'Submit entry';
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
   }
 }
 
