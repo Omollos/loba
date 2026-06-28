@@ -12,14 +12,13 @@ import (
 )
 
 func main() {
-	// Load environment variables
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	// Load .env file if it exists (local development)
+	// In production (Railway) environment variables are injected directly
+	// so missing .env file is not an error
+	godotenv.Load()
 
 	// Connect to Neon database
-	err = db.Connect()
+	err := db.Connect()
 	if err != nil {
 		log.Fatalf("Database connection failed: %v", err)
 	}
@@ -69,8 +68,7 @@ func main() {
 	http.HandleFunc("PUT /api/v1/entries/{id}/definition", handlers.RequireReviewer(handlers.UpdateEntryDefinition))
 
 	log.Printf("Loba API starting on port %s", port)
-	err = http.ListenAndServe(":"+port, withCORS(http.DefaultServeMux))
-	if err != nil {
+	if err := http.ListenAndServe(":"+port, withCORS(http.DefaultServeMux)); err != nil {
 		log.Fatal(err)
 	}
 }
