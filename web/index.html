@@ -31,11 +31,13 @@
   <div class="form-row">
     <div class="form-col">
       <label>Dholuo text <span style="color:#D85A30">*</span></label>
-      <input type="text" id="source_text" placeholder="e.g. Chuny" class="dholuo-input">
+      <input type="text" id="source_text" placeholder="e.g. Pii" class="dholuo-input" oninput="clearError('source_text')">
+      <span class="field-error" id="source_text-error">Dholuo text is required</span>
     </div>
     <div class="form-col">
       <label>English translation <span style="color:#D85A30">*</span></label>
-      <input type="text" id="english" placeholder="e.g. Heart, soul, spirit">
+      <input type="text" id="english" placeholder="e.g. Water" oninput="clearError('english')">
+      <span class="field-error" id="english-error">English translation is required</span>
     </div>
   </div>
 
@@ -123,7 +125,8 @@
   <div class="form-row">
     <div class="form-col">
       <label>Your username <span style="color:#D85A30">*</span></label>
-      <input type="text" id="username" placeholder="e.g. stevomollo">
+      <input type="text" id="username" placeholder="e.g. stevomollo" oninput="clearError('username')">
+      <span class="field-error" id="username-error">Username is required</span>
     </div>
     <div class="form-col">
       <label>Email <span style="font-size:11px;color:#6B6860;font-weight:300;">(optional — for contributor credit)</span></label>
@@ -151,8 +154,29 @@ async function submitEntry() {
   const sourceText = document.getElementById('source_text').value.trim();
   const english = document.getElementById('english').value.trim();
 
-  if (!username || !sourceText || !english) {
-    showResult('error', 'Username, Dholuo text, and English translation are required.');
+  // Validate and show inline errors
+  let hasErrors = false;
+
+  if (!username) {
+    showError('username', 'Username is required');
+    hasErrors = true;
+  }
+  if (!sourceText) {
+    showError('source_text', 'Dholuo text is required');
+    hasErrors = true;
+  }
+  if (!english) {
+    showError('english', 'English translation is required');
+    hasErrors = true;
+  }
+
+  if (hasErrors) {
+    // Re-enable button since we're not submitting
+    const btn = document.querySelector('button[onclick="submitEntry()"]');
+    btn.disabled = false;
+    btn.textContent = 'Submit entry';
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
     return;
   }
 
@@ -223,6 +247,26 @@ async function submitEntry() {
   }
 }
 
+function showError(fieldId, message) {
+  const input = document.getElementById(fieldId);
+  const error = document.getElementById(`${fieldId}-error`);
+  if (input) input.classList.add('invalid');
+  if (error) {
+    error.textContent = message;
+    error.classList.add('visible');
+  }
+}
+
+function clearError(fieldId) {
+  const input = document.getElementById(fieldId);
+  const error = document.getElementById(`${fieldId}-error`);
+  if (input) {
+    input.classList.remove('invalid');
+    if (input.value.trim()) input.classList.add('valid');
+  }
+  if (error) error.classList.remove('visible');
+}
+
 function showResult(type, message) {
   const el = document.getElementById('result');
   el.className = type;
@@ -234,11 +278,19 @@ function clearForm() {
   ['source_text','english','definition_source','definition_english',
    'example_source','example_english','explanation',
    'english_equivalent','notes'].forEach(id => {
-    document.getElementById(id).value = '';
+    const el = document.getElementById(id);
+    if (el) {
+      el.value = '';
+      el.classList.remove('invalid', 'valid');
+    }
   });
   document.getElementById('category').value = '';
   document.getElementById('custom-category').style.display = 'none';
   document.querySelectorAll('.dialect-check').forEach(cb => cb.checked = false);
+  ['username-error','source_text-error','english-error'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('visible');
+  });
 }
 </script>
 

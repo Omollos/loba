@@ -30,10 +30,44 @@ func CreateEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate required fields — source_text and english are mandatory
-	// Everything else is optional but encouraged
-	if req.SourceText == "" || req.English == "" {
-		http.Error(w, "source_text and english are required", http.StatusBadRequest)
+	// Validate required fields server-side — never trust the client
+	type ValidationError struct {
+		Field   string `json:"field"`
+		Message string `json:"message"`
+	}
+	var validationErrors []ValidationError
+
+	if req.SourceText == "" {
+		validationErrors = append(validationErrors, ValidationError{
+			Field:   "source_text",
+			Message: "Dholuo text is required",
+		})
+	}
+	if req.English == "" {
+		validationErrors = append(validationErrors, ValidationError{
+			Field:   "english",
+			Message: "English translation is required",
+		})
+	}
+	if len([]rune(req.SourceText)) > 500 {
+		validationErrors = append(validationErrors, ValidationError{
+			Field:   "source_text",
+			Message: "Dholuo text is too long (max 500 characters)",
+		})
+	}
+	if len([]rune(req.English)) > 500 {
+		validationErrors = append(validationErrors, ValidationError{
+			Field:   "english",
+			Message: "English translation is too long (max 500 characters)",
+		})
+	}
+
+	if len(validationErrors) > 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"errors": validationErrors,
+		})
 		return
 	}
 

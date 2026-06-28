@@ -322,3 +322,24 @@ button:hover { opacity: 0.85; }
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Form validation ── */
+.field-error {
+  font-size: 12px;
+  color: #993C1D;
+  margin-top: 3px;
+  display: none;
+}
+
+.field-error.visible {
+  display: block;
+}
+
+input.invalid, textarea.invalid, select.invalid {
+  border-color: #F5C4B3;
+  background: #FFFAF9;
+}
+
+input.valid, textarea.valid {
+  border-color: #9FE1CB;
+}
