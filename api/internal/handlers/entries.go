@@ -882,3 +882,57 @@ func DeleteEntry(w http.ResponseWriter, r *http.Request) {
 		"id":      id,
 	})
 }
+
+// UpdateEntryDefinition handles PUT /api/v1/entries/{id}/definition
+// Allows updating definition_source and definition_english on any entry
+// Used by reviewers to enrich existing approved entries
+func UpdateEntryDefinition(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "entry id is required", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		DefinitionSource  string `json:"definition_source"`
+		DefinitionEnglish string `json:"definition_english"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	var defSource *string
+	if req.DefinitionSource != "" {
+		defSource = &req.DefinitionSource
+	}
+	var defEnglish *string
+	if req.DefinitionEnglish != "" {
+		defEnglish = &req.DefinitionEnglish
+	}
+
+	_, err = db.DB.Exec(
+		context.Background(),
+		`UPDATE entries
+		SET definition_source = COALESCE($1, definition_source),
+			definition_english = COALESCE($2, definition_english)
+		WHERE id = $3`,
+		defSource, defEnglish, id,
+	)
+	if err != nil {
+		http.Error(w, "could not update definition: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "definition updated",
+		"id":      id,
+	})
+}

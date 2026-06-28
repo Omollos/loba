@@ -48,9 +48,12 @@ func main() {
 		}
 	})
 
-	// Approve / flag — Go 1.22 path patterns with {id}
-	http.HandleFunc("PUT /api/v1/entries/{id}/approve", handlers.UpdateEntryStatus("approved"))
-	http.HandleFunc("PUT /api/v1/entries/{id}/flag", handlers.UpdateEntryStatus("flagged"))
+	// Auth routes
+	http.HandleFunc("GET /auth/github", handlers.GitHubLogin)
+	http.HandleFunc("GET /auth/callback", handlers.GitHubCallback)
+	http.HandleFunc("GET /auth/me", handlers.GetMe)
+
+	// Public entry routes
 	http.HandleFunc("POST /api/v1/entries/{id}/vote", handlers.CastVote)
 	http.HandleFunc("GET /api/v1/stats", handlers.GetStats)
 	http.HandleFunc("POST /api/v1/contributors", handlers.GetOrCreateContributor)
@@ -58,7 +61,12 @@ func main() {
 	http.HandleFunc("GET /api/v1/export/jsonl", handlers.ExportJSONL)
 	http.HandleFunc("GET /api/v1/export/csv", handlers.ExportCSV)
 	http.HandleFunc("GET /api/v1/languages", handlers.GetLanguages)
-	http.HandleFunc("DELETE /api/v1/entries/{id}", handlers.DeleteEntry)
+
+	// Protected routes — reviewer only
+	http.HandleFunc("PUT /api/v1/entries/{id}/approve", handlers.RequireReviewer(handlers.UpdateEntryStatus("approved")))
+	http.HandleFunc("PUT /api/v1/entries/{id}/flag", handlers.RequireReviewer(handlers.UpdateEntryStatus("flagged")))
+	http.HandleFunc("DELETE /api/v1/entries/{id}", handlers.RequireReviewer(handlers.DeleteEntry))
+	http.HandleFunc("PUT /api/v1/entries/{id}/definition", handlers.RequireReviewer(handlers.UpdateEntryDefinition))
 
 	log.Printf("Loba API starting on port %s", port)
 	err = http.ListenAndServe(":"+port, withCORS(http.DefaultServeMux))
