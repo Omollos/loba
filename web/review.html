@@ -20,40 +20,149 @@
 
 <div class="page-wrap">
 <div class="card wide-card">
-  <p class="sub" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem;">Review queue</p>
 
-  <div style="display: flex; gap: 8px; margin-bottom: 1.5rem;">
-    <button class="queue-tab active" onclick="switchTab('pending', this)">
-      Pending <span id="pending-count" style="font-size: 11px; background: #F5F0E8; padding: 2px 7px; border-radius: 10px; margin-left: 4px;"></span>
-    </button>
-    <button class="queue-tab" onclick="switchTab('flagged', this)">
-      Flagged <span id="flagged-count" style="font-size: 11px; background: #F5F0E8; padding: 2px 7px; border-radius: 10px; margin-left: 4px;"></span>
-    </button>
+  <!-- Login state — shown when not authenticated -->
+  <div id="login-state" style="display:none; text-align:center; padding: 3rem 1rem;">
+    <div style="font-size: 2rem; margin-bottom: 1rem;">🔒</div>
+    <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem;">Reviewer access only</h2>
+    <p style="font-size: 14px; color: #6B6860; margin-bottom: 1.5rem; font-weight: 300;">Sign in with GitHub to access the review queue. Only approved reviewers can approve or flag entries.</p>
+    <a href="http://localhost:8080/auth/github" style="
+      display: inline-block;
+      background: #1A1A18;
+      color: #F5F0E8;
+      padding: 11px 24px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+    ">
+      Sign in with GitHub
+    </a>
   </div>
 
-  <div id="queue">
-    <div class="loading">Loading...</div>
+  <!-- Not reviewer state -->
+  <div id="not-reviewer-state" style="display:none; text-align:center; padding: 3rem 1rem;">
+    <div style="font-size: 2rem; margin-bottom: 1rem;">⚠️</div>
+    <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem;">Not a reviewer</h2>
+    <p style="font-size: 14px; color: #6B6860; margin-bottom: 1rem; font-weight: 300;">Your GitHub account is not registered as a reviewer. Contact the project maintainer to request reviewer access.</p>
+    <button onclick="logout()" style="font-size:13px; background:none; border:0.5px solid rgba(26,26,24,0.15); padding: 7px 16px; border-radius: 20px; cursor:pointer; color:#6B6860;">Sign out</button>
   </div>
+
+  <!-- Review queue — shown when authenticated as reviewer -->
+  <div id="review-state" style="display:none;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+      <div>
+        <p class="sub" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">Review queue</p>
+        <div id="reviewer-name" style="font-size:13px;color:#6B6860;"></div>
+      </div>
+      <button onclick="logout()" style="font-size:12px; background:none; border:0.5px solid rgba(26,26,24,0.15); padding: 6px 14px; border-radius: 20px; cursor:pointer; color:#6B6860;">Sign out</button>
+    </div>
+
+    <div style="display: flex; gap: 8px; margin-bottom: 1.5rem;">
+      <button class="queue-tab active" onclick="switchTab('pending', this)">
+        Pending <span id="pending-count" style="font-size: 11px; background: #F5F0E8; padding: 2px 7px; border-radius: 10px; margin-left: 4px;"></span>
+      </button>
+      <button class="queue-tab" onclick="switchTab('flagged', this)">
+        Flagged <span id="flagged-count" style="font-size: 11px; background: #F5F0E8; padding: 2px 7px; border-radius: 10px; margin-left: 4px;"></span>
+      </button>
+    </div>
+
+    <div id="queue">
+      <div class="loading">Loading...</div>
+    </div>
+  </div>
+
 </div>
 </div>
 
 <script>
 const API_URL = "http://localhost:8080/api/v1/entries";
 let currentTab = 'pending';
+let sessionToken = null;
+
+// Auth 
+
+async function init() {
+  // Check for token in URL fragment (just returned from GitHub)
+  const hash = window.location.hash;
+  if (hash.includes('token=')) {
+    const token = hash.split('token=')[1];
+    localStorage.setItem('loba_review_token', token);
+    // Clean the token from the URL
+    window.history.replaceState(null, '', window.location.pathname);
+  }
+
+  if (hash.includes('not-reviewer')) {
+    window.history.replaceState(null, '', window.location.pathname);
+    showState('not-reviewer-state');
+    return;
+  }
+
+  // Check for stored token
+  const stored = localStorage.getItem('loba_review_token');
+  if (!stored) {
+    showState('login-state');
+    return;
+  }
+
+  // Validate token with the API
+  try {
+    const response = await fetch('http://localhost:8080/auth/me', {
+      headers: { 'Authorization': `Bearer ${stored}` }
+    });
+
+    if (!response.ok) {
+      // Token expired or invalid
+      localStorage.removeItem('loba_review_token');
+      showState('login-state');
+      return;
+    }
+
+    const user = await response.json();
+
+    if (!user.is_reviewer) {
+      showState('not-reviewer-state');
+      return;
+    }
+
+    // Valid reviewer — show the queue
+    sessionToken = stored;
+    document.getElementById('reviewer-name').textContent =
+      `Signed in as @${user.username}`;
+    showState('review-state');
+    loadQueue('pending');
+    loadCounts();
+
+  } catch {
+    showState('login-state');
+  }
+}
+
+function showState(id) {
+  ['login-state', 'not-reviewer-state', 'review-state'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? 'block' : 'none';
+  });
+}
+
+function logout() {
+  localStorage.removeItem('loba_review_token');
+  sessionToken = null;
+  showState('login-state');
+}
+
+// Review queue 
 
 async function loadQueue(status) {
   const el = document.getElementById('queue');
   el.innerHTML = '<div class="loading">Loading...</div>';
 
   try {
-    const response = await fetch(`${API_URL}?status=${status}&rating=general&rating=mature&rating=restricted`);
-
-    // fetch all ratings for review queue
-    const r = await fetch(`${API_URL}?status=${status}`);
+    const r = await fetch(`${API_URL}?status=${status}`, {
+      headers: { 'Authorization': `Bearer ${sessionToken}` }
+    });
     if (!r.ok) throw new Error('Failed to load');
     const entries = await r.json();
 
-    // update count badge
     document.getElementById(`${status}-count`).textContent = entries.length;
 
     if (entries.length === 0) {
@@ -85,8 +194,8 @@ async function loadQueue(status) {
         ` : ''}
 
         ${status === 'pending' ? `
-        <div style="margin-bottom: 10px; padding: 10px 14px; background: #F5F0E8; border-radius: 8px;">
-            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: #6B6860; font-weight: 500; margin-bottom: 6px;">Tiend wach e Dholuo (reviewer can add/edit before approving)</div>
+          <div style="margin-bottom: 10px; padding: 10px 14px; background: #F5F0E8; border-radius: 8px;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: #6B6860; font-weight: 500; margin-bottom: 6px;">Tiend wach e Dholuo (add or edit before approving)</div>
             <textarea
               id="def-source-${entry.id}"
               style="width:100%;font-size:14px;padding:8px 10px;border:0.5px solid rgba(26,26,24,0.15);border-radius:8px;font-family:inherit;resize:vertical;min-height:60px;margin-bottom:6px;"
@@ -133,7 +242,6 @@ function showFlagReason(id) {
   const textarea = document.getElementById(`flag-reason-${id}`);
   textarea.style.display = 'block';
   textarea.focus();
-  // Replace flag button with confirm button
   const actions = textarea.closest('.entry-row').querySelector('.entry-actions');
   actions.innerHTML = `
     <button class="btn-approve" onclick="approveEntry('${id}')">Approve</button>
@@ -167,19 +275,23 @@ async function confirmFlag(id) {
     alert('Please enter a reason for flagging this entry.');
     return;
   }
-  await updateStatus(id, 'flag', 'general', reason);
+  await updateStatus(id, 'flag', 'general', reason, '', '');
 }
 
 async function reopenEntry(id) {
-  await updateStatus(id, 'approve', 'general', '');
+  await updateStatus(id, 'approve', 'general', '', '', '');
 }
 
 async function deleteEntry(id) {
   if (!confirm('Permanently delete this entry? This cannot be undone.')) return;
   try {
-    const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${sessionToken}` }
+    });
     if (!response.ok) throw new Error('Delete failed');
     removeRow(id);
+    loadCounts();
   } catch (err) {
     alert('Could not delete: ' + err.message);
   }
@@ -189,12 +301,15 @@ async function updateStatus(id, action, rating, flagReason, defSource, defEnglis
   try {
     const response = await fetch(`${API_URL}/${id}/${action}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionToken}`
+      },
       body: JSON.stringify({
         rating,
         flag_reason: flagReason,
-        definition_source: defSource || '',
-        definition_english: defEnglish || ''
+        definition_source: defSource,
+        definition_english: defEnglish
       })
     });
     if (!response.ok) throw new Error('Update failed');
@@ -204,6 +319,7 @@ async function updateStatus(id, action, rating, flagReason, defSource, defEnglis
     alert('Could not update entry: ' + err.message);
   }
 }
+
 function removeRow(id) {
   const row = document.getElementById(`row-${id}`);
   if (row) {
@@ -221,8 +337,12 @@ function removeRow(id) {
 async function loadCounts() {
   try {
     const [pendingRes, flaggedRes] = await Promise.all([
-      fetch(`${API_URL}?status=pending`),
-      fetch(`${API_URL}?status=flagged`)
+      fetch(`${API_URL}?status=pending`, {
+        headers: { 'Authorization': `Bearer ${sessionToken}` }
+      }),
+      fetch(`${API_URL}?status=flagged`, {
+        headers: { 'Authorization': `Bearer ${sessionToken}` }
+      })
     ]);
     const pending = await pendingRes.json();
     const flagged = await flaggedRes.json();
@@ -245,8 +365,7 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-loadQueue('pending');
-loadCounts();
+init();
 </script>
 
 </body>

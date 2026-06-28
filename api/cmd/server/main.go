@@ -30,7 +30,7 @@ func main() {
 		port = "8080"
 	}
 
-	// ── Routes ───────────────────────────────────────────
+	// Routes
 	// Health check
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Loba API is running.")
@@ -83,7 +83,7 @@ func withCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
 		// Browsers send an OPTIONS request first to check permissions
 		// before the real request — respond OK immediately for these
