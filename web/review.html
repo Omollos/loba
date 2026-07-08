@@ -198,31 +198,99 @@ async function loadQueue(status) {
         ` : ''}
 
         ${status === 'pending' ? `
-          <div style="margin-bottom: 10px; padding: 10px 14px; background: #F5F0E8; border-radius: 8px;">
-            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: #6B6860; font-weight: 500; margin-bottom: 6px;">Tiend wach e Dholuo (add or edit before approving)</div>
-            <textarea
-              id="def-source-${entry.id}"
-              style="width:100%;font-size:14px;padding:8px 10px;border:0.5px solid rgba(26,26,24,0.15);border-radius:8px;font-family:inherit;resize:vertical;min-height:60px;margin-bottom:6px;"
-              placeholder="Explain what this word means in Dholuo..."
-            >${entry.definition_source ? escapeHtml(entry.definition_source) : ''}</textarea>
-            <textarea
-              id="def-english-${entry.id}"
-              style="width:100%;font-size:14px;padding:8px 10px;border:0.5px solid rgba(26,26,24,0.15);border-radius:8px;font-family:inherit;resize:vertical;min-height:60px;"
-              placeholder="English translation of the Dholuo definition..."
-            >${entry.definition_english ? escapeHtml(entry.definition_english) : ''}</textarea>
-          </div>
-          <div style="margin-bottom: 8px;">
-            <select id="rating-${entry.id}" style="font-size: 12px; padding: 5px 10px; border-radius: 8px; border: 0.5px solid rgba(26,26,24,0.15); margin-bottom: 6px;">
-              <option value="general">General — safe for all audiences</option>
-              <option value="mature">Mature — valid but not for public dictionary</option>
-              <option value="restricted">Restricted — private corpus only</option>
-            </select>
+          <div style="margin-bottom: 10px;">
+
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: #6B6860; font-weight: 500; margin-bottom: 8px; margin-top: 12px;">Edit before approving</div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+              <div>
+                <div style="font-size: 11px; color: #6B6860; margin-bottom: 4px;">Dholuo text</div>
+                <input type="text" id="edit-source-${entry.id}"
+                  value="${entry.source_text ? escapeHtml(entry.source_text) : ''}"
+                  style="width:100%;font-size:14px;padding:7px 10px;border:0.5px solid rgba(26,26,24,0.15);border-radius:8px;font-family:inherit;">
+              </div>
+              <div>
+                <div style="font-size: 11px; color: #6B6860; margin-bottom: 4px;">English translation</div>
+                <input type="text" id="edit-english-${entry.id}"
+                  value="${entry.english ? escapeHtml(entry.english) : ''}"
+                  style="width:100%;font-size:14px;padding:7px 10px;border:0.5px solid rgba(26,26,24,0.15);border-radius:8px;font-family:inherit;">
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+              <div>
+                <div style="font-size: 11px; color: #6B6860; margin-bottom: 4px;">Tiend wach e Dholuo</div>
+                <textarea id="def-source-${entry.id}"
+                  style="width:100%;font-size:13px;padding:7px 10px;border:0.5px solid rgba(26,26,24,0.15);border-radius:8px;font-family:inherit;resize:vertical;min-height:60px;"
+                  placeholder="Meaning in Dholuo..."
+                >${entry.definition_source ? escapeHtml(entry.definition_source) : ''}</textarea>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: #6B6860; margin-bottom: 4px;">English translation of definition</div>
+                <textarea id="def-english-${entry.id}"
+                  style="width:100%;font-size:13px;padding:7px 10px;border:0.5px solid rgba(26,26,24,0.15);border-radius:8px;font-family:inherit;resize:vertical;min-height:60px;"
+                  placeholder="English translation of the Dholuo definition..."
+                >${entry.definition_english ? escapeHtml(entry.definition_english) : ''}</textarea>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+              <div>
+                <div style="font-size: 11px; color: #6B6860; margin-bottom: 4px;">Example sentence (Dholuo)</div>
+                <textarea id="edit-example-source-${entry.id}"
+                  style="width:100%;font-size:13px;padding:7px 10px;border:0.5px solid rgba(26,26,24,0.15);border-radius:8px;font-family:inherit;resize:vertical;min-height:55px;"
+                  placeholder="Example sentence in Dholuo..."
+                >${entry.example_source ? escapeHtml(entry.example_source) : ''}</textarea>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: #6B6860; margin-bottom: 4px;">Example sentence (English)</div>
+                <textarea id="edit-example-english-${entry.id}"
+                  style="width:100%;font-size:13px;padding:7px 10px;border:0.5px solid rgba(26,26,24,0.15);border-radius:8px;font-family:inherit;resize:vertical;min-height:55px;"
+                  placeholder="English translation of example..."
+                >${entry.example_english ? escapeHtml(entry.example_english) : ''}</textarea>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+              <div>
+                <div style="font-size: 11px; color: #6B6860; margin-bottom: 4px;">Cultural context / deeper meaning</div>
+                <textarea id="edit-explanation-${entry.id}"
+                  style="width:100%;font-size:13px;padding:7px 10px;border:0.5px solid rgba(26,26,24,0.15);border-radius:8px;font-family:inherit;resize:vertical;min-height:55px;"
+                  placeholder="Cultural context, when it is used..."
+                >${entry.explanation ? escapeHtml(entry.explanation) : ''}</textarea>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: #6B6860; margin-bottom: 4px;">English equivalent</div>
+                <input type="text" id="edit-english-equivalent-${entry.id}"
+                  value="${entry.english_equivalent ? escapeHtml(entry.english_equivalent) : ''}"
+                  style="width:100%;font-size:13px;padding:7px 10px;border:0.5px solid rgba(26,26,24,0.15);border-radius:8px;font-family:inherit;"
+                  placeholder="e.g. Every cloud has a silver lining">
+              </div>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+              <div style="font-size: 11px; color: #6B6860; margin-bottom: 4px;">Notes (pronunciation, tone, usage)</div>
+              <textarea id="edit-notes-${entry.id}"
+                style="width:100%;font-size:13px;padding:7px 10px;border:0.5px solid rgba(26,26,24,0.15);border-radius:8px;font-family:inherit;resize:vertical;min-height:55px;"
+                placeholder="Pronunciation guide, tone, register, usage context..."
+              >${entry.notes ? escapeHtml(entry.notes) : ''}</textarea>
+            </div>
+
+            <div style="margin-bottom: 10px;">
+              <select id="rating-${entry.id}" style="font-size: 12px; padding: 5px 10px; border-radius: 8px; border: 0.5px solid rgba(26,26,24,0.15);">
+                <option value="general">General — safe for all audiences</option>
+                <option value="mature">Mature — valid but not for public dictionary</option>
+                <option value="restricted">Restricted — private corpus only</option>
+              </select>
+            </div>
+
             <textarea
               id="flag-reason-${entry.id}"
               class="flag-reason-input"
               placeholder="Flag reason (required when flagging)..."
               style="display:none;"
             ></textarea>
+
           </div>
           <div class="entry-actions">
             <button class="btn-approve" onclick="approveEntry('${entry.id}')">Approve</button>
@@ -269,7 +337,15 @@ async function approveEntry(id) {
   const rating = ratingEl ? ratingEl.value : 'general';
   const defSource = document.getElementById(`def-source-${id}`)?.value || '';
   const defEnglish = document.getElementById(`def-english-${id}`)?.value || '';
-  await updateStatus(id, 'approve', rating, '', defSource, defEnglish);
+  const sourceText = document.getElementById(`edit-source-${id}`)?.value || '';
+  const english = document.getElementById(`edit-english-${id}`)?.value || '';
+  const exampleSource = document.getElementById(`edit-example-source-${id}`)?.value || '';
+  const exampleEnglish = document.getElementById(`edit-example-english-${id}`)?.value || '';
+  const explanation = document.getElementById(`edit-explanation-${id}`)?.value || '';
+  const englishEquivalent = document.getElementById(`edit-english-equivalent-${id}`)?.value || '';
+  const notes = document.getElementById(`edit-notes-${id}`)?.value || '';
+  await updateStatus(id, 'approve', rating, '', defSource, defEnglish,
+    sourceText, english, exampleSource, exampleEnglish, explanation, englishEquivalent, notes);
 }
 
 async function confirmFlag(id) {
@@ -279,11 +355,11 @@ async function confirmFlag(id) {
     alert('Please enter a reason for flagging this entry.');
     return;
   }
-  await updateStatus(id, 'flag', 'general', reason, '', '');
+  await updateStatus(id, 'flag', 'general', reason, '', '', '', '', '', '', '', '', '');
 }
 
 async function reopenEntry(id) {
-  await updateStatus(id, 'approve', 'general', '', '', '');
+  await updateStatus(id, 'approve', 'general', '', '', '', '', '', '', '', '', '', '');
 }
 
 async function deleteEntry(id) {
@@ -301,7 +377,8 @@ async function deleteEntry(id) {
   }
 }
 
-async function updateStatus(id, action, rating, flagReason, defSource, defEnglish) {
+async function updateStatus(id, action, rating, flagReason, defSource, defEnglish,
+  sourceText, english, exampleSource, exampleEnglish, explanation, englishEquivalent, notes) {
   try {
     const response = await fetch(`${API_URL}/${id}/${action}`, {
       method: 'PUT',
@@ -313,7 +390,14 @@ async function updateStatus(id, action, rating, flagReason, defSource, defEnglis
         rating,
         flag_reason: flagReason,
         definition_source: defSource,
-        definition_english: defEnglish
+        definition_english: defEnglish,
+        source_text: sourceText,
+        english: english,
+        example_source: exampleSource,
+        example_english: exampleEnglish,
+        explanation: explanation,
+        english_equivalent: englishEquivalent,
+        notes: notes
       })
     });
     if (!response.ok) throw new Error('Update failed');

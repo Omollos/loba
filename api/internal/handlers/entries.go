@@ -263,12 +263,19 @@ func UpdateEntryStatus(newStatus string) http.HandlerFunc {
 		}
 
 		// Reviewers can optionally set a rating when approving
-		// Body is optional — if empty, rating stays as is
+		// Body is optional — if empty, rating stays as is or defaults to "general" if not set yet
 		var req struct {
 			Rating            string `json:"rating"`
 			FlagReason        string `json:"flag_reason"`
 			DefinitionSource  string `json:"definition_source"`
 			DefinitionEnglish string `json:"definition_english"`
+			SourceText        string `json:"source_text"`
+			English           string `json:"english"`
+			ExampleSource     string `json:"example_source"`
+			ExampleEnglish    string `json:"example_english"`
+			Explanation       string `json:"explanation"`
+			EnglishEquivalent string `json:"english_equivalent"`
+			Notes             string `json:"notes"`
 		}
 		json.NewDecoder(r.Body).Decode(&req)
 
@@ -276,38 +283,75 @@ func UpdateEntryStatus(newStatus string) http.HandlerFunc {
 			req.Rating = "general"
 		}
 
+		var entry models.Entry
+		// Build nullable pointers for optional fields
+		var defSource, defEnglish, sourceText, english *string
+		var exampleSource, exampleEnglish, explanation, englishEquivalent, notes *string
+
+		if req.DefinitionSource != "" {
+			defSource = &req.DefinitionSource
+		}
+		if req.DefinitionEnglish != "" {
+			defEnglish = &req.DefinitionEnglish
+		}
+		if req.SourceText != "" {
+			sourceText = &req.SourceText
+		}
+		if req.English != "" {
+			english = &req.English
+		}
+		if req.ExampleSource != "" {
+			exampleSource = &req.ExampleSource
+		}
+		if req.ExampleEnglish != "" {
+			exampleEnglish = &req.ExampleEnglish
+		}
+		if req.Explanation != "" {
+			explanation = &req.Explanation
+		}
+		if req.EnglishEquivalent != "" {
+			englishEquivalent = &req.EnglishEquivalent
+		}
+		if req.Notes != "" {
+			notes = &req.Notes
+		}
+
 		var flagReason *string
 		if req.FlagReason != "" {
 			flagReason = &req.FlagReason
 		}
 
-		var entry models.Entry
-		var defSource *string
-		if req.DefinitionSource != "" {
-			defSource = &req.DefinitionSource
-		}
-		var defEnglish *string
-		if req.DefinitionEnglish != "" {
-			defEnglish = &req.DefinitionEnglish
-		}
-
 		err := db.DB.QueryRow(
 			context.Background(),
 			`UPDATE entries
-			SET status = $1, rating = $2, flag_reason = $3,
+			SET status = $1,
+				rating = $2,
+				flag_reason = $3,
 				definition_source = COALESCE($5, definition_source),
 				definition_english = COALESCE($6, definition_english),
+				source_text = COALESCE($7, source_text),
+				english = COALESCE($8, english),
+				example_source = COALESCE($9, example_source),
+				example_english = COALESCE($10, example_english),
+				explanation = COALESCE($11, explanation),
+				english_equivalent = COALESCE($12, english_equivalent),
+				notes = COALESCE($13, notes),
 				reviewed_at = now()
 			WHERE id = $4
 			RETURNING id, language_id, source_text, english,
-				part_of_speech, explanation, english_equivalent,
-				example_source, example_english, notes, category,
-				dialect, status, vote_score, rating, flag_reason,
+				part_of_speech, definition_source, definition_english,
+				explanation, english_equivalent, example_source,
+				example_english, notes, category, dialect,
+				status, vote_score, rating, flag_reason,
 				created_at, reviewed_at`,
-			newStatus, req.Rating, flagReason, id, defSource, defEnglish,
+			newStatus, req.Rating, flagReason, id,
+			defSource, defEnglish, sourceText, english,
+			exampleSource, exampleEnglish, explanation,
+			englishEquivalent, notes,
 		).Scan(
 			&entry.ID, &entry.LanguageID, &entry.SourceText, &entry.English,
-			&entry.PartOfSpeech, &entry.Explanation, &entry.EnglishEquivalent,
+			&entry.PartOfSpeech, &entry.DefinitionSource, &entry.DefinitionEnglish,
+			&entry.Explanation, &entry.EnglishEquivalent,
 			&entry.ExampleSource, &entry.ExampleEnglish, &entry.Notes,
 			&entry.Category, &entry.Dialect, &entry.Status,
 			&entry.VoteScore, &entry.Rating, &entry.FlagReason,
