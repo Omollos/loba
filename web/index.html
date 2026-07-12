@@ -85,8 +85,8 @@
   <!-- Row 5: category + dialect -->
   <div class="form-row">
     <div class="form-col">
-      <label>Category</label>
-      <select id="category">
+      <label>Category <span style="color:#D85A30">*</span></label>
+      <select id="category" onchange="clearError('category')">
         <option value="">Select category</option>
         <option>Greetings</option>
         <option>Family</option>
@@ -105,6 +105,7 @@
         <option value="__custom__">Other (type below)</option>
       </select>
       <input type="text" id="custom-category" placeholder="Type your category" style="display:none; margin-top: 6px;">
+      <span class="field-error" id="category-error">Category is required</span>
     </div>
     <div class="form-col">
       <label>Dialect region(s)</label>
@@ -171,6 +172,12 @@ async function submitEntry() {
   }
   if (!english) {
     showError('english', 'English translation is required');
+    hasErrors = true;
+  }
+
+  if (!document.getElementById('category').value ||
+      document.getElementById('category').value === '') {
+    showError('category', 'Category is required');
     hasErrors = true;
   }
 
@@ -291,7 +298,7 @@ function clearForm() {
   document.getElementById('category').value = '';
   document.getElementById('custom-category').style.display = 'none';
   document.querySelectorAll('.dialect-check').forEach(cb => cb.checked = false);
-  ['username-error','source_text-error','english-error'].forEach(id => {
+  ['username-error','source_text-error','english-error','category-error'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('visible');
   });

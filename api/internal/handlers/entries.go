@@ -62,6 +62,13 @@ func CreateEntry(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	if req.Category == "" {
+		validationErrors = append(validationErrors, ValidationError{
+			Field:   "category",
+			Message: "Category is required",
+		})
+	}
+	
 	if len(validationErrors) > 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
