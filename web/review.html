@@ -161,11 +161,12 @@ async function loadQueue(status) {
   el.innerHTML = '<div class="loading">Loading...</div>';
 
   try {
-    const r = await fetch(`${API_URL}?status=${status}`, {
+    const r = await fetch(`${API_URL}?status=${status}&limit=100`, {
       headers: { 'Authorization': `Bearer ${sessionToken}` }
     });
     if (!r.ok) throw new Error('Failed to load');
-    const entries = await r.json();
+    const data = await r.json();
+    const entries = data.entries || [];
 
     document.getElementById(`${status}-count`).textContent = entries.length;
 
@@ -425,17 +426,17 @@ function removeRow(id) {
 async function loadCounts() {
   try {
     const [pendingRes, flaggedRes] = await Promise.all([
-      fetch(`${API_URL}?status=pending`, {
+      fetch(`${API_URL}?status=pending&limit=100`, {
         headers: { 'Authorization': `Bearer ${sessionToken}` }
       }),
-      fetch(`${API_URL}?status=flagged`, {
+      fetch(`${API_URL}?status=flagged&limit=100`, {
         headers: { 'Authorization': `Bearer ${sessionToken}` }
       })
     ]);
     const pending = await pendingRes.json();
     const flagged = await flaggedRes.json();
-    document.getElementById('pending-count').textContent = pending.length;
-    document.getElementById('flagged-count').textContent = flagged.length;
+    document.getElementById('pending-count').textContent = (pending.entries || []).length;
+    document.getElementById('flagged-count').textContent = (flagged.entries || []).length;
   } catch {}
 }
 
