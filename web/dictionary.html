@@ -33,78 +33,111 @@
   <div id="dictionary">
     <div class="loading">Loading dictionary...</div>
   </div>
+  <div id="pagination"></div>
 </div>
 
 <script>
-const API_URL = "https://loba-production.up.railway.app/api/v1/entries";
+const API_URL = "http://localhost:8080/api/v1/entries";
 
 let allEntries = [];
 let activeCategory = "All";
+let currentPage = 1;
+let totalPages = 1;
+let totalEntries = 0;
+const LIMIT = 20;
 
-async function loadDictionary() {
+async function loadDictionary(page = 1) {
   const el = document.getElementById('dictionary');
+  el.innerHTML = '<div class="loading">Loading...</div>';
+
+  const params = new URLSearchParams({
+    status: 'approved',
+    page: page,
+    limit: LIMIT,
+  });
+
+  if (activeCategory !== 'All') params.append('category', activeCategory);
+
+  const searchQuery = document.getElementById('search').value.trim();
 
   try {
-    const response = await fetch(`${API_URL}?status=approved`);
+    const response = await fetch(`${API_URL}?${params}`);
     if (!response.ok) throw new Error('Failed to load entries');
 
-    allEntries = await response.json();
+    const data = await response.json();
+    allEntries = data.entries;
+    currentPage = data.page;
+    totalPages = data.total_pages;
+    totalEntries = data.total;
 
-    buildCategoryFilters();
-    renderEntries();
+    // Build category filters only on first load
+    if (page === 1 && activeCategory === 'All' && !searchQuery) {
+      await buildCategoryFilters();
+    }
+
+    // Client-side search filter on current page results
+    const filtered = searchQuery
+      ? allEntries.filter(e =>
+          e.source_text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          e.english.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : allEntries;
+
+    renderEntries(filtered);
+    renderPagination();
 
   } catch (err) {
     el.innerHTML = `<div class="empty-state">Could not load dictionary: ${err.message}</div>`;
   }
 }
 
-function buildCategoryFilters() {
-  const categories = ["All", ...new Set(allEntries.map(e => e.category).filter(Boolean))];
-  const filterEl = document.getElementById('category-filters');
-
-  filterEl.innerHTML = categories.map(cat => `
-    <button
-      onclick="setCategory('${cat}')"
-      style="
-        font-size: 12px;
-        padding: 5px 14px;
-        border-radius: 20px;
-        border: 0.5px solid rgba(26,26,24,0.15);
-        background: ${cat === activeCategory ? '#1A1A18' : 'white'};
-        color: ${cat === activeCategory ? '#F5F0E8' : '#1A1A18'};
-        cursor: pointer;
-      "
-    >${cat}</button>
-  `).join('');
+async function buildCategoryFilters() {
+  // Fetch all approved entries just for category extraction
+  // We do this once to build the filter pills
+  try {
+    const r = await fetch(`${API_URL}?status=approved&limit=500`);
+    const d = await r.json();
+    const cats = ["All", ...new Set((d.entries || []).map(e => e.category).filter(Boolean))];
+    const filterEl = document.getElementById('category-filters');
+    filterEl.innerHTML = cats.map(cat => `
+      <button
+        onclick="setCategory('${cat}')"
+        style="
+          font-size: 12px;
+          padding: 5px 14px;
+          border-radius: 20px;
+          border: 0.5px solid rgba(26,26,24,0.15);
+          background: ${cat === activeCategory ? '#1A1A18' : 'white'};
+          color: ${cat === activeCategory ? '#F5F0E8' : '#1A1A18'};
+          cursor: pointer;
+        "
+      >${cat}</button>
+    `).join('');
+  } catch {}
 }
 
 function setCategory(cat) {
   activeCategory = cat;
-  buildCategoryFilters();
-  renderEntries();
+  currentPage = 1;
+  document.getElementById('search').value = '';
+  // Rebuild category filter pills to reflect active state
+  document.querySelectorAll('#category-filters button').forEach(btn => {
+    const isActive = btn.textContent === cat;
+    btn.style.background = isActive ? '#1A1A18' : 'white';
+    btn.style.color = isActive ? '#F5F0E8' : '#1A1A18';
+  });
+  loadDictionary(1);
 }
 
-function renderEntries() {
+function renderEntries(entries) {
   const el = document.getElementById('dictionary');
-  const query = document.getElementById('search').value.toLowerCase();
 
-  const filtered = allEntries.filter(e => {
-    const matchesCategory = activeCategory === "All" || e.category === activeCategory;
-    const matchesSearch = !query ||
-      e.source_text.toLowerCase().includes(query) ||
-      e.english.toLowerCase().includes(query);
-    return matchesCategory && matchesSearch;
-  });
-
-  if (filtered.length === 0) {
+  if (!entries || entries.length === 0) {
     el.innerHTML = '<div class="empty-state">No entries match your search.</div>';
     return;
   }
 
-  // Sort alphabetically by source text
-  filtered.sort((a, b) => a.source_text.localeCompare(b.source_text));
-
-  el.innerHTML = filtered.map(entry => `
+  el.innerHTML = entries.map(entry => `
     <div class="entry-row" onclick="toggleDetail('${entry.id}')" style="cursor: pointer;">
       <div class="entry-source">${escapeHtml(entry.source_text)}</div>
       <div class="entry-english">${escapeHtml(entry.english)}</div>
@@ -113,38 +146,38 @@ function renderEntries() {
         ${entry.dialect ? `<span class="badge">${escapeHtml(entry.dialect)}</span>` : ''}
         ${entry.vote_score > 0 ? `<span class="badge">${entry.vote_score} verifications</span>` : ''}
       </div>
-      <div id="detail-${entry.id}" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 0.5px solid rgba(26,26,24,0.1);">
+      <div id="detail-${entry.id}" style="display:none; margin-top:12px; padding-top:12px; border-top:0.5px solid rgba(26,26,24,0.1);">
 
         ${entry.definition_source ? `
-          <div style="background: #E1F5EE; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px;">
-            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: #0F6E56; font-weight: 500; margin-bottom: 5px;">Tiend wach e Dholuo</div>
-            <div style="font-size: 15px; color: #1A1A18; line-height: 1.6;">${escapeHtml(entry.definition_source)}</div>
-            ${entry.definition_english ? `<div style="font-size: 13px; color: #6B6860; margin-top: 5px; font-style: italic;">${escapeHtml(entry.definition_english)}</div>` : ''}
+          <div style="background:#E1F5EE;border-radius:8px;padding:10px 14px;margin-bottom:10px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:#0F6E56;font-weight:500;margin-bottom:5px;">Tiend wach e Dholuo</div>
+            <div style="font-size:15px;color:#1A1A18;line-height:1.6;">${escapeHtml(entry.definition_source)}</div>
+            ${entry.definition_english ? `<div style="font-size:13px;color:#6B6860;margin-top:5px;font-style:italic;">${escapeHtml(entry.definition_english)}</div>` : ''}
           </div>
         ` : ''}
 
         ${entry.example_source ? `
-          <div style="margin-bottom: 8px;">
-            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: #6B6860; font-weight: 500; margin-bottom: 4px;">Example</div>
-            <div style="font-style: italic; color: #1A1A18; font-size: 14px; margin-bottom: 2px;">${escapeHtml(entry.example_source)}</div>
-            ${entry.example_english ? `<div style="font-size: 13px; color: #6B6860;">${escapeHtml(entry.example_english)}</div>` : ''}
+          <div style="margin-bottom:8px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:#6B6860;font-weight:500;margin-bottom:4px;">Example</div>
+            <div style="font-style:italic;color:#1A1A18;font-size:14px;margin-bottom:2px;">${escapeHtml(entry.example_source)}</div>
+            ${entry.example_english ? `<div style="font-size:13px;color:#6B6860;">${escapeHtml(entry.example_english)}</div>` : ''}
           </div>
         ` : ''}
 
         ${entry.explanation ? `
-          <div style="margin-bottom: 6px; font-size: 13px; color: #6B6860;">
-            <strong style="color: #1A1A18;">Meaning:</strong> ${escapeHtml(entry.explanation)}
+          <div style="margin-bottom:6px;font-size:13px;color:#6B6860;">
+            <strong style="color:#1A1A18;">Meaning:</strong> ${escapeHtml(entry.explanation)}
           </div>
         ` : ''}
 
         ${entry.english_equivalent ? `
-          <div style="margin-bottom: 6px; font-size: 13px; color: #6B6860;">
-            <strong style="color: #1A1A18;">English equivalent:</strong> ${escapeHtml(entry.english_equivalent)}
+          <div style="margin-bottom:6px;font-size:13px;color:#6B6860;">
+            <strong style="color:#1A1A18;">English equivalent:</strong> ${escapeHtml(entry.english_equivalent)}
           </div>
         ` : ''}
 
         ${entry.notes ? `
-          <div style="font-size: 13px; color: #6B6860; border-top: 0.5px solid rgba(26,26,24,0.08); padding-top: 8px; margin-top: 8px;">
+          <div style="font-size:13px;color:#6B6860;border-top:0.5px solid rgba(26,26,24,0.08);padding-top:8px;margin-top:8px;">
             ${escapeHtml(entry.notes)}
           </div>
         ` : ''}
@@ -154,23 +187,109 @@ function renderEntries() {
   `).join('');
 }
 
+function renderPagination() {
+  const el = document.getElementById('pagination');
+  if (!el) return;
+
+  if (totalPages <= 1) {
+    el.innerHTML = '';
+    return;
+  }
+
+  // Build page number buttons
+  // Show max 5 page numbers with ellipsis for large sets
+  let pages = [];
+  if (totalPages <= 7) {
+    pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  } else {
+    if (currentPage <= 4) {
+      pages = [1, 2, 3, 4, 5, '...', totalPages];
+    } else if (currentPage >= totalPages - 3) {
+      pages = [1, '...', totalPages-4, totalPages-3, totalPages-2, totalPages-1, totalPages];
+    } else {
+      pages = [1, '...', currentPage-1, currentPage, currentPage+1, '...', totalPages];
+    }
+  }
+
+  const btnStyle = (active) => `
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 0.5px solid ${active ? '#1A1A18' : 'rgba(26,26,24,0.15)'};
+    background: ${active ? '#1A1A18' : 'white'};
+    color: ${active ? '#F5F0E8' : '#1A1A18'};
+    cursor: ${active ? 'default' : 'pointer'};
+    font-family: inherit;
+  `;
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:1.5rem;flex-wrap:wrap;">
+      <button
+        onclick="goToPage(${currentPage - 1})"
+        ${currentPage === 1 ? 'disabled' : ''}
+        style="${btnStyle(false)} ${currentPage === 1 ? 'opacity:0.35;cursor:not-allowed;' : ''}"
+      >← Prev</button>
+
+      ${pages.map(p => p === '...'
+        ? `<span style="padding:6px 4px;color:#6B6860;font-size:13px;">…</span>`
+        : `<button
+            onclick="goToPage(${p})"
+            style="${btnStyle(p === currentPage)}"
+          >${p}</button>`
+      ).join('')}
+
+      <button
+        onclick="goToPage(${currentPage + 1})"
+        ${currentPage === totalPages ? 'disabled' : ''}
+        style="${btnStyle(false)} ${currentPage === totalPages ? 'opacity:0.35;cursor:not-allowed;' : ''}"
+      >Next →</button>
+    </div>
+    <div style="text-align:center;font-size:12px;color:#6B6860;margin-top:8px;">
+      Showing ${((currentPage-1)*LIMIT)+1}–${Math.min(currentPage*LIMIT, totalEntries)} of ${totalEntries} entries
+    </div>
+  `;
+}
+
+function goToPage(page) {
+  if (page < 1 || page > totalPages) return;
+  currentPage = page;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  loadDictionary(page);
+}
+
 function toggleDetail(id) {
   const detail = document.getElementById(`detail-${id}`);
   const isOpen = detail.style.display === 'block';
-  // Close all other open details first
   document.querySelectorAll('[id^="detail-"]').forEach(d => d.style.display = 'none');
   detail.style.display = isOpen ? 'none' : 'block';
 }
 
 function escapeHtml(text) {
+  if (!text) return '';
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
 
-document.getElementById('search').addEventListener('input', renderEntries);
+// Search — reloads from page 1 with search on current page results
+document.getElementById('search').addEventListener('input', () => {
+  const query = document.getElementById('search').value.trim();
+  if (!query) {
+    loadDictionary(1);
+  } else {
+    // Filter current page results client-side for instant feel
+    const filtered = allEntries.filter(e =>
+      e.source_text.toLowerCase().includes(query.toLowerCase()) ||
+      e.english.toLowerCase().includes(query.toLowerCase())
+    );
+    renderEntries(filtered);
+    // Hide pagination during search
+    const el = document.getElementById('pagination');
+    if (el) el.innerHTML = '';
+  }
+});
 
-loadDictionary();
+loadDictionary(1);
 </script>
 </div>
 

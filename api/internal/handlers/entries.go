@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/Omollos/loba/api/internal/db"
@@ -171,6 +172,23 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 		rating = "general"
 	}
 
+	// Pagination
+	page := 1
+	limit := 20
+
+	if p := r.URL.Query().Get("page"); p != "" {
+		if parsed, err := strconv.Atoi(p); err == nil && parsed > 0 {
+			page = parsed
+		}
+	}
+
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 100 {
+			limit = parsed
+		}
+	}
+	
+	offset := (page - 1) * limit
 	// Build the query — filter by status always, category optionally
 	var rows interface {
 		Next() bool
@@ -193,8 +211,9 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 			AND e.category = $2
 			AND ($3 = '' OR l.code = $3)
 			AND e.rating = $4
-			ORDER BY e.created_at DESC`,
-			status, category, lang, rating,
+			ORDER BY e.created_at DESC
+			LIMIT $5 OFFSET $6`,
+			status, category, lang, rating, limit, offset,
 		)
 	} else {
 		rows, err = db.DB.Query(
@@ -209,8 +228,9 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 			WHERE e.status = $1
 			AND ($2 = '' OR l.code = $2)
 			AND e.rating = $3
-			ORDER BY e.created_at DESC`,
-			status, lang, rating,
+			ORDER BY e.created_at DESC
+			LIMIT $4 OFFSET $5`,
+			status, lang, rating, limit, offset,
 		)
 	}
 	if err != nil {
@@ -249,8 +269,36 @@ func ListEntries(w http.ResponseWriter, r *http.Request) {
 		entries = []models.Entry{}
 	}
 
+	// Get total count for pagination metadata
+	var total int
+	countQuery := `SELECT COUNT(*) FROM entries e
+		JOIN languages l ON l.id = e.language_id
+		WHERE e.status = $1 AND e.rating = $2`
+	countArgs := []interface{}{status, rating}
+
+	if category != "" && lang != "" {
+		countQuery += ` AND e.category = $3 AND l.code = $4`
+		countArgs = append(countArgs, category, lang)
+	} else if category != "" {
+		countQuery += ` AND e.category = $3`
+		countArgs = append(countArgs, category)
+	} else if lang != "" {
+		countQuery += ` AND l.code = $3`
+		countArgs = append(countArgs, lang)
+	}
+
+	db.DB.QueryRow(context.Background(), countQuery, countArgs...).Scan(&total)
+
+	totalPages := (total + limit - 1) / limit
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(entries)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"entries":     entries,
+		"total":       total,
+		"page":        page,
+		"limit":       limit,
+		"total_pages": totalPages,
+	})
 }
 
 // UpdateEntryStatus handles PUT /api/v1/entries/{id}/approve
