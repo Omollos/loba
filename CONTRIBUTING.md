@@ -2,6 +2,59 @@
 
 Thank you for helping preserve a language. Every word you add matters.
 
+## Local development setup
+
+### Prerequisites
+- Go 1.18 or higher (`go version` to check)
+- Git
+- A terminal
+
+### Steps
+
+1. **Fork and clone the repo**
+```bash
+git clone https://github.com/YOUR-USERNAME/loba.git
+cd loba/api
+```
+
+2. **Create your `.env` file**
+```bash
+cp .env.example .env
+```
+Then edit `.env` with your own values. You will need:
+- `DATABASE_URL` — contact the maintainer for a development database branch
+- `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` — create your own OAuth App at github.com/settings/developers (Homepage URL: `http://localhost:8080`, Callback URL: `http://localhost:8080/auth/callback`)
+- `SESSION_SECRET` — any long random string you choose
+- `FRONTEND_URL` — `http://localhost:5500`
+
+3. **Download dependencies**
+```bash
+go mod download
+```
+If this times out on a slow connection, run it again — Go resumes from what was already cached.
+
+4. **Run the API**
+```bash
+go run cmd/server/main.go
+```
+You should see:
+
+Connected to Neon database successfully
+Loba API starting on port 8080
+
+5. **Serve the frontend**
+```bash
+cd ../web
+python3 -m http.server 5500
+```
+Then open `http://localhost:5500/dictionary.html` in your browser.
+
+### Important
+- Never commit your `.env` file — it is in `.gitignore`
+- Run all Go commands from inside the `api/` folder
+- Run all Git commands from the repo root (`loba/`)
+- Database migrations live in `scripts/` — do not run them against production without discussing with the maintainer first
+
 ## Who can contribute?
 
 Anyone. You do not need to be a linguist or a developer. If you speak Dholuo — or any of the languages Loba will support — you are qualified.
